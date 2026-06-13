@@ -1,41 +1,73 @@
-#include <templatebot/templatebot.h>
+#include <dpp/dpp.h>
+#include <dpp/nlohmann/json.hpp>
+
+#include "command.h"
+
+namespace ping
+{
+    void Run(const dpp::slashcommand_t& event)
+    {
+        event.reply("Pong! :3");
+    }
+}
+
+static fixedphilip::Command ping_("ping", "piiing pooong", &ping::Run);
+
+namespace meow
+{
+    void Run(const dpp::slashcommand_t& event)
+    {
+        event.reply("mrrrrp >w<");
+    }
+}
+
+static fixedphilip::Command meow_("meow", "meow :3 mrrrp >w<", &meow::Run);
 
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.
  * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
  */
 
-using json = nlohmann::json;
+int main(int argc, char const *argv[])
+{
+    nlohmann::json config;
+    {
+        std::ifstream config_file("config.json");
+        config_file >> config;
+    }
 
-int main(int argc, char const *argv[]) {
-    json configdocument;
-    std::ifstream configfile("../config.json");
-    configfile >> configdocument;
+    std::string token = config["token"];
+    dpp::cluster bot(token);
 
-    const std::string BOT_TOKEN = configdocument["token"];
-
-    /* Set up the bot */
-    dpp::cluster bot(BOT_TOKEN);
-
-    /* Output simple log messages to stdout */
     bot.on_log(dpp::utility::cout_logger());
 
-    /* Handle slash command */
-    bot.on_slashcommand([](const dpp::slashcommand_t& event) {
-         if (event.command.get_command_name() == "ping") {
-            event.reply("Pong!");
+    bot.on_slashcommand([](const dpp::slashcommand_t& event)
+    {
+        auto iter = fixedphilip::Command::GetFirst();
+        while (iter)
+        {
+            if (event.command.get_command_name() == iter->GetName())
+            {
+                iter->Run(event);
+                break;
+            }
+            iter = iter->GetNext();
         }
     });
 
-    /* Register slash command here in on_ready */
-    bot.on_ready([&bot](const dpp::ready_t& event) {
-        /* Wrap command registration in run_once to make sure it doesn't run on every full reconnection */
-        if (dpp::run_once<struct register_bot_commands>()) {
-            bot.global_command_create(dpp::slashcommand("ping", "Ping pong!", bot.me.id));
+    bot.on_ready([&bot](const dpp::ready_t& event)
+    {
+        if (dpp::run_once<struct register_bot_commands>())
+        {
+            auto iter = fixedphilip::Command::GetFirst();
+            while (iter)
+            {
+                bot.global_command_create(dpp::slashcommand(iter->GetName(), iter->GetDescription(), bot.me.id));
+                iter = iter->GetNext();
+            }
         }
     });
 
-    /* Start the bot */
     bot.start(dpp::st_wait);
 
     return 0;

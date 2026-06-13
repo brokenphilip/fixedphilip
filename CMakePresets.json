@@ -1,0 +1,101 @@
+﻿{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "linux-base",
+      "description": "Target the Windows Subsystem for Linux (WSL) or a remote system.",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "cacheVariables": {
+        "OPENSSL_ROOT_DIR": "/home/filip/fixedphilip/libs",
+        "ZLIB_LIBRARY": "/home/filip/fixedphilip/libs/lib/libz.so",
+        "ZLIB_INCLUDE_DIR": "/home/filip/fixedphilip/libs/include",
+        "OPUS_INCLUDE_DIRS": "/home/filip/fixedphilip/libs/include",
+        "OPUS_LIBRARIES": "/home/filip/fixedphilip/libs/lib/libopus.so",
+        "HAVE_OPUS_OPUS_H": "1",
+        "CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
+        "CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++",
+        "CMAKE_SYSTEM_PROCESSOR": "aarch64"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "vendor": { "microsoft.com/VisualStudioRemoteSettings/CMake/2.0": { "remoteSourceRootDir": "$env{HOME}/.vs/$ms{projectDirName}" } }
+    },
+    {
+      "name": "windows-base",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "x64-debug-windows",
+      "displayName": "x64 Debug (Windows)",
+      "description": "Target Windows (64-bit) with the Visual Studio development environment. (Debug)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "x64-release-windows",
+      "displayName": "x64 Release (Windows)",
+      "description": "Target Windows (64-bit) with the Visual Studio development environment. (RelWithDebInfo)",
+      "inherits": "x64-debug-windows",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "x86-debug-windows",
+      "displayName": "x86 Debug (Windows)",
+      "description": "Target Windows (32-bit) with the Visual Studio development environment. (Debug)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "x86-release-windows",
+      "displayName": "x86 Release (Windows)",
+      "description": "Target Windows (32-bit) with the Visual Studio development environment. (RelWithDebInfo)",
+      "inherits": "x86-debug-windows",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "aarch64-debug-linux",
+      "displayName": "ARM64 Debug (Linux)",
+      "description": "Target Linux (64-bit) with the Visual Studio development environment. (Debug)",
+      "inherits": "linux-base",
+      "architecture": {
+        "value": "aarch64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "aarch64-release-linux",
+      "displayName": "ARM64 Release (Linux)",
+      "description": "Target Linux (64-bit) with the Visual Studio development environment. (RelWithDebInfo)",
+      "inherits": "aarch64-debug-linux",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    }
+  ]
+}
