@@ -1,5 +1,5 @@
 # fixedphilip
-fixedphilip is a general-purpose Discord bot written in C++ [D++](https://dpp.dev/)
+fixedphilip is a general-purpose Discord bot written in C++, utilizing the [D++](https://dpp.dev/) library.
 
 > [!NOTE]
 > This repository is currently an **early work-in-progress**, any and all information is subject to change without notice and may be missing or incorrect.
