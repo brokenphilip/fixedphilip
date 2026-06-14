@@ -12,7 +12,7 @@ string(ASCII 27 Esc)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set_target_properties(${BOT_NAME} PROPERTIES
-    CXX_STANDARD 17
+    CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
 
@@ -59,33 +59,7 @@ else()
 		if (NOT RESULT EQUAL 0)
 			message(FATAL_ERROR "Failed to update the D++ submodule. Code: ${RESULT}.")
 		else()
-			#<slopgpt>
-
-			# ====================================================================
-			# FIX FOR DPP AARCH64 CROSS-COMPILATION (Place right BEFORE add_subdirectory(DPP))
-			# ====================================================================
-			if(NOT TARGET std::filesystem)
-				# 1. Force create the target DPP is looking for as a Global Interface
-				add_library(std::filesystem INTERFACE IMPORTED GLOBAL)
-    
-				# 2. Force C++17 properties to bind to this target
-				target_compile_features(std::filesystem INTERFACE cxx_std_17)
-
-				# 3. Handle older GCC cross-compilers in WSL that need explicit linkage
-				if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-					target_link_libraries(std::filesystem INTERFACE "stdc++fs")
-				endif()
-			endif()
-
-			# Tell DPP's custom Finder that we already satisfied this dependency
-			set(Filesystem_FOUND TRUE CACHE BOOL "" FORCE)
-			set(STD_FILESYSTEM_FOUND TRUE CACHE BOOL "" FORCE)
-
-			# NOW call the DPP subdirectory safely
-			add_subdirectory(DPP) 
-
-			#</slopgpt>
-			#add_subdirectory(DPP)
+			add_subdirectory(DPP)
 			target_link_libraries(${BOT_NAME} dpp)
 		endif()
 	else()

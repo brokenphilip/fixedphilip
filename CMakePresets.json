@@ -2,19 +2,13 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "linux-base",
-      "description": "Target the Windows Subsystem for Linux (WSL) or a remote system.",
+      "name": "linux-to-aarch64-base",
+      "description": "Target the Windows Subsystem for Linux (WSL) or a remote system, to build an ARM64 project.",
       "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
       "cacheVariables": {
-        "OPENSSL_ROOT_DIR": "/home/filip/fixedphilip/libs",
-        "ZLIB_LIBRARY": "/home/filip/fixedphilip/libs/lib/libz.so",
-        "ZLIB_INCLUDE_DIR": "/home/filip/fixedphilip/libs/include",
-        "OPUS_INCLUDE_DIRS": "/home/filip/fixedphilip/libs/include",
-        "OPUS_LIBRARIES": "/home/filip/fixedphilip/libs/lib/libopus.so",
-        "HAVE_OPUS_OPUS_H": "1",
         "CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
         "CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++",
         "CMAKE_SYSTEM_PROCESSOR": "aarch64"
@@ -82,8 +76,8 @@
     {
       "name": "aarch64-debug-linux",
       "displayName": "ARM64 Debug (Linux)",
-      "description": "Target Linux (64-bit) with the Visual Studio development environment. (Debug)",
-      "inherits": "linux-base",
+      "description": "Target Linux (ARM64) with the Visual Studio development environment. (Debug)",
+      "inherits": "linux-to-aarch64-base",
       "architecture": {
         "value": "aarch64",
         "strategy": "external"
@@ -93,7 +87,7 @@
     {
       "name": "aarch64-release-linux",
       "displayName": "ARM64 Release (Linux)",
-      "description": "Target Linux (64-bit) with the Visual Studio development environment. (RelWithDebInfo)",
+      "description": "Target Linux (ARM64) with the Visual Studio development environment. (RelWithDebInfo)",
       "inherits": "aarch64-debug-linux",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }

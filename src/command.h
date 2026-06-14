@@ -1,9 +1,6 @@
 #pragma once
 
-namespace dpp
-{
-	class slashcommand_t;
-}
+#include <dpp/dispatcher.h>
 
 namespace fixedphilip
 {
@@ -39,4 +36,5 @@ namespace fixedphilip
 	};
 }
 
-#define FIXEDPHILIP_COMMAND(name, description) static fixedphilip::Command name##_##(#name, description, &name::Run)
+// fixme
+//#define FIXEDPHILIP_COMMAND(name, description) static fixedphilip::Command name##_##(#name, description, &name::Run)
