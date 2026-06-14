@@ -27,7 +27,7 @@ zlib1.dll
 
 ### ...on ARM64
 Ensure the required runtime libraries are installed before running `./fixedphilip`:
-```
+```sh
 #! /usr/bin/env sh
 
 # install runtime libraries
