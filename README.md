@@ -87,7 +87,9 @@ sudo apt upgrade
 # install wget (for dpp)
 # install build tools (for building)
 # install ARM64 specific development libraries (for building to ARM64)
-sudo apt install openssh-client wget rsync build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake ninja-build libopus-dev:arm64 libssl-dev:arm64 zlib1g-dev:arm64
+sudo apt install openssh-client wget rsync build-essential gcc-aarch64-linux-gnu \
+                 g++-aarch64-linux-gnu cmake ninja-build libopus-dev:arm64 \
+				 libssl-dev:arm64 zlib1g-dev:arm64
 
 # install ARM64 dpp library
 mkdir ~/fixedphilip
