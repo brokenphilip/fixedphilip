@@ -1,0 +1,2 @@
+#pragma once
+#define FIXEDPHILIP_GIT_REVISION_COUNT 07

@@ -4,37 +4,36 @@
 
 namespace fixedphilip
 {
-	class Command
+	class command
 	{
 	public:
-		using RunFn = void(const dpp::slashcommand_t& event);
+		using run_function = void(const dpp::slashcommand_t& event);
 	private:
-		static inline Command* first = nullptr;
-		static inline Command* last = nullptr;
+		static inline command* _first = nullptr;
+		static inline command* _last = nullptr;
 
-		Command* prev = nullptr;
-		Command* next = nullptr;
+		command* _prev = nullptr;
+		command* _next = nullptr;
 
-		const char* name;
-		const char* description;
+		const char* _name;
+		const char* _description;
 
-		RunFn* run;
+		run_function* _run;
 	public:
-		Command(const char* name, const char* description, RunFn* run);
-		~Command();
+		command(const char* name, const char* description, run_function* run);
+		~command();
 
-		inline auto GetPrev() { return prev; }
-		inline auto GetNext() { return next; }
+		inline auto previous() { return _prev; }
+		inline auto next() { return _next; }
 
-		inline auto GetName() { return name; }
-		inline auto GetDescription() { return description; }
+		inline auto name() { return _name; }
+		inline auto description() { return _description; }
 
-		inline auto Run(const dpp::slashcommand_t& event) { run(event); }
+		inline auto run(const dpp::slashcommand_t& event) { _run(event); }
 
-		static inline auto GetFirst() { return first; }
-		static inline auto GetLast() { return last; }
+		static inline auto first() { return _first; }
+		static inline auto last() { return _last; }
 	};
 }
 
-// fixme
-//#define FIXEDPHILIP_COMMAND(name, description) static fixedphilip::Command name##_##(#name, description, &name::Run)
+#define FIXEDPHILIP_COMMAND(name, description) static fixedphilip::command name##_(#name, description, &name::run)

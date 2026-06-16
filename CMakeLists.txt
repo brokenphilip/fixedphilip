@@ -4,8 +4,20 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(BOT_NAME "fixedphilip")
 
 project(${BOT_NAME})
-aux_source_directory("src" coresrc)
-add_executable(${BOT_NAME} ${coresrc})
+
+aux_source_directory("src" core_src)
+aux_source_directory("src/commands" core_src_commands)
+add_executable(${BOT_NAME} ${core_src} ${core_src_commands})
+
+add_custom_target(BEFORE_BUILD
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	COMMAND git rev-list --count HEAD && ${CMAKE_COMMAND} -E echo "#pragma once" > src/git.h && ${CMAKE_COMMAND} -E echo_append "#define FIXEDPHILIP_GIT_REVISION_COUNT 0" >> src/git.h && git rev-list --count HEAD >> src/git.h || ${CMAKE_COMMAND} -E true
+	COMMAND ${CMAKE_COMMAND} -E touch "src/version.cpp"
+	COMMENT "Updating git.h with latest revision count for HEAD (if possible), and touching version.cpp..."
+	VERBATIM
+)
+
+add_dependencies(${BOT_NAME} BEFORE_BUILD)
 
 string(ASCII 27 Esc)
 

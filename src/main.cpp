@@ -5,63 +5,35 @@
 #include <dpp/nlohmann/json.hpp>
 
 #include "command.h"
+#include "version.h"
+#include "log.h"
 
-namespace ping
-{
-    void Run(const dpp::slashcommand_t& event)
-    {
-        event.reply("Pong! :3");
-    }
-}
-
-static fixedphilip::Command ping_("ping", "piiing pooong", &ping::Run);
-
-namespace meow
-{
-    void Run(const dpp::slashcommand_t& event)
-    {
-        event.reply("mrrrrp >w<");
-    }
-}
-
-static fixedphilip::Command meow_("meow", "meow :3 mrrrp >w<", &meow::Run);
+#include "utils/stopwatch.h"
 
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.
  * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
  */
 
-namespace fixedphilip
-{
-    void dpp_cout_log(dpp::loglevel severity, std::string message)
-    {
-        if (severity > dpp::ll_trace)
-        {
-            std::cout << "[" << dpp::utility::current_date_time() << "] " << dpp::utility::loglevel(severity) << ": " << message << "\n";
-        }
-    }
-}
-
-#define FIXEDPHILIP_VERSION "0.1"
-
 int main(int argc, char const *argv[])
 {
-    fixedphilip::dpp_cout_log(dpp::loglevel::ll_info, "fixedphilip " FIXEDPHILIP_VERSION " by brokenphilip");
+    fixedphilip::utils::app_uptime.start();
+    fixedphilip::log::info(std::format("fixedphilip {} ({}) by brokenphilip", fixedphilip::build_version(), fixedphilip::build_date_time()));
 
     const char* config_file_name = "config.json";
     if (!std::filesystem::exists(config_file_name))
     {
-        fixedphilip::dpp_cout_log(dpp::loglevel::ll_warning, std::format("Configuration file not found - creating '{}'...", config_file_name));
+        fixedphilip::log::warning(std::format("Configuration file not found - creating '{}'...", config_file_name));
+
         std::ofstream config_file(config_file_name);
         if (!config_file)
         {
-            fixedphilip::dpp_cout_log(dpp::loglevel::ll_error, "Failed to create the config file! Exiting...");
+            fixedphilip::log::error("Failed to create the config file! Exiting...");
             return 1;
         }
 
         config_file << "{ \"token\": \"your_bot_token_here\" }";
-        fixedphilip::dpp_cout_log(dpp::loglevel::ll_info, "Config file created - modify it before running the program again. Exiting...");
-
+        fixedphilip::log::info("Config file created - modify it before running the program again. Exiting...");
         return 1;
     }
 
@@ -70,7 +42,7 @@ int main(int argc, char const *argv[])
         std::ifstream config_file(config_file_name);
         if (!config_file)
         {
-            fixedphilip::dpp_cout_log(dpp::loglevel::ll_error, "Failed to read the config file! Exiting...");
+            fixedphilip::log::error("Failed to read the config file! Exiting...");
             return 1;
         }
 
@@ -80,19 +52,22 @@ int main(int argc, char const *argv[])
     std::string token = config["token"];
     dpp::cluster bot(token);
 
+    //dpp::utility::bot_invite_url();
+    //fixedphilip::dpp_cout_log(dpp::loglevel::ll_info, bot.invite
+
     bot.on_log(dpp::utility::cout_logger());
 
     bot.on_slashcommand([](const dpp::slashcommand_t& event)
     {
-        auto iter = fixedphilip::Command::GetFirst();
+        auto iter = fixedphilip::command::first();
         while (iter)
         {
-            if (event.command.get_command_name() == iter->GetName())
+            if (event.command.get_command_name() == iter->name())
             {
-                iter->Run(event);
+                iter->run(event);
                 break;
             }
-            iter = iter->GetNext();
+            iter = iter->next();
         }
     });
 
@@ -100,11 +75,11 @@ int main(int argc, char const *argv[])
     {
         if (dpp::run_once<struct register_bot_commands>())
         {
-            auto iter = fixedphilip::Command::GetFirst();
+            auto iter = fixedphilip::command::first();
             while (iter)
             {
-                bot.global_command_create(dpp::slashcommand(iter->GetName(), iter->GetDescription(), bot.me.id));
-                iter = iter->GetNext();
+                bot.global_command_create(dpp::slashcommand(iter->name(), iter->description(), bot.me.id));
+                iter = iter->next();
             }
         }
     });
