@@ -11,7 +11,7 @@ add_executable(${BOT_NAME} ${core_src} ${core_src_commands})
 
 add_custom_target(BEFORE_BUILD
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	COMMAND git rev-list --count HEAD && ${CMAKE_COMMAND} -E echo "#pragma once" > src/git.h && ${CMAKE_COMMAND} -E echo_append "#define FIXEDPHILIP_GIT_REVISION_COUNT " >> src/git.h && git rev-list --count HEAD >> src/git.h || ${CMAKE_COMMAND} -E true
+	COMMAND git rev-list --count HEAD && ${CMAKE_COMMAND} -E echo "#pragma once" > include/git.h && ${CMAKE_COMMAND} -E echo_append "#define FIXEDPHILIP_GIT_REVISION_COUNT " >> include/git.h && git rev-list --count HEAD >> include/git.h || ${CMAKE_COMMAND} -E true
 	COMMAND ${CMAKE_COMMAND} -E touch "src/version.cpp"
 	COMMENT "Updating git.h with latest revision count for HEAD (if possible), and touching version.cpp..."
 	VERBATIM
