@@ -1,8 +1,8 @@
-#include "log.h"
+#include <log.h>
 
-#include <iostream>
+#include <iostream> // std::cout
 
-#include <dpp/misc-enum.h>
+#include <dpp/misc-enum.h> // dpp::loglevel
 #include <dpp/utility.h>
 
 namespace fixedphilip

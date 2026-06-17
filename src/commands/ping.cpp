@@ -1,6 +1,5 @@
+#include <command.h>
 #include <dpp/dpp.h>
-
-#include "../command.h"
 
 namespace ping
 {

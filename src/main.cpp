@@ -4,11 +4,11 @@
 #include <dpp/dpp.h>
 #include <dpp/nlohmann/json.hpp>
 
-#include "command.h"
-#include "version.h"
-#include "log.h"
+#include <command.h>
+#include <version.h>
+#include <log.h>
 
-#include "utils/stopwatch.h"
+#include <utils/stopwatch.h>
 
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.

@@ -1,5 +1,5 @@
-#include "git.h"
-#include "version.h"
+#include <version.h>
+#include <git.h>
 
 const char* fixedphilip::build_date_time()
 {

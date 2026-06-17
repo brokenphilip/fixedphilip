@@ -1,6 +1,6 @@
-#include <cstring>
+#include <command.h>
 
-#include "command.h"
+#include <cstring> // strcmp
 
 namespace fixedphilip
 {

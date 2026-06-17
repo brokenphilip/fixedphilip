@@ -1,11 +1,9 @@
+#include <command.h>
 #include <dpp/dpp.h>
 
 #include <format>
-
-#include "../command.h"
-#include "../version.h"
-
-#include "../utils/stopwatch.h"
+#include <version.h>
+#include <utils/stopwatch.h>
 
 namespace status
 {
