@@ -4,6 +4,11 @@
 
 namespace ping
 {
+    void init(dpp::slashcommand& command)
+    {
+
+    }
+
     void run(const dpp::slashcommand_t& event)
     {
         auto cluster = event.owner;

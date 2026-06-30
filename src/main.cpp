@@ -77,7 +77,9 @@ int main(int argc, char const *argv[])
             auto iter = fixedphilip::command::first();
             while (iter)
             {
-                bot.global_command_create(dpp::slashcommand(iter->name(), iter->description(), bot.me.id));
+                dpp::slashcommand command(iter->name(), iter->description(), bot.me.id);
+                iter->init(command);
+                bot.global_command_create(command);
                 iter = iter->next();
             }
         }
