@@ -74,6 +74,37 @@ int main(int argc, char const *argv[])
     {
         if (dpp::run_once<struct register_bot_commands>())
         {
+            // first, fetch all previously registered commands, and remove the ones that don't exist anymore
+            bot.global_commands_get([&bot](const dpp::confirmation_callback_t& result)
+            {
+                if (auto commands_ptr = std::get_if<dpp::slashcommand_map>(&result.value))
+                {
+                    auto commands = *commands_ptr;
+
+                    // get stale commands
+                    auto iter = fixedphilip::command::first();
+                    while (iter)
+                    {
+                        auto name = iter->name();
+                        std::erase_if(commands, [name](const auto& item)
+                        {
+                            // hold intellisense's hand
+                            const dpp::slashcommand& command = item.second;
+                            return strncmp(name, command.name.c_str(), strlen(name)) == 0;
+                        });
+                        iter = iter->next();
+                    }
+
+                    // delete stale commands
+                    for (const auto& [key, value] : commands)
+                    {
+                        fixedphilip::log::info(std::format("Deleting stale command '{}'...", value.name));
+                        bot.global_command_delete(key);
+                    }
+                }
+            });
+
+            // finally, register our commands
             auto iter = fixedphilip::command::first();
             while (iter)
             {
@@ -88,5 +119,6 @@ int main(int argc, char const *argv[])
     bot.start(dpp::st_wait);
 
     fixedphilip::log::info("Cluster shards terminated. Shutting down...");
+    fixedphilip::utils::app_uptime.stop();
     return 0;
 }
