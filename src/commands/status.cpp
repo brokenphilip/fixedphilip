@@ -1,9 +1,10 @@
-#include <command.h>
-#include <dpp/dpp.h>
-
 #include <format>
-#include <version.h>
-#include <utils/stopwatch.h>
+
+#include <fixedphilip/command.h>
+#include <fixedphilip/version.h>
+#include <fixedphilip/utils/stopwatch.h>
+
+#include <dpp/dpp.h>
 
 namespace status
 {
