@@ -12,7 +12,7 @@ namespace ping
         }
         else
         {
-            event.reply("Pong! :3 (??? ms)");
+            event.reply("Pong! :3");
         }
     }
 }
