@@ -20,7 +20,7 @@ namespace test
 	void run(const dpp::slashcommand_t& event)
 	{
 		auto subcmd = event.command.get_command_interaction().options[0];
-		if (subcmd.name == "user")
+		if (subcmd.name == "mention")
 		{
 			if (subcmd.options.empty())
 			{
