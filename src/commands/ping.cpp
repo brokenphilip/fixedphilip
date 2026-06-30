@@ -1,4 +1,5 @@
 #include <fixedphilip/command.h>
+#include <fixedphilip/log.h>
 
 #include <dpp/dpp.h>
 
@@ -18,6 +19,7 @@ namespace ping
         }
         else
         {
+            fixedphilip::log::warning("ping command: cluster was null");
             event.reply("Pong! :3");
         }
     }

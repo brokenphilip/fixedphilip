@@ -27,12 +27,12 @@ int main(int argc, char const *argv[])
         std::ofstream config_file(config_file_name);
         if (!config_file)
         {
-            fixedphilip::log::error("Failed to create the config file! Exiting...");
+            fixedphilip::log::error("Failed to create the config file! Shutting down...");
             return 1;
         }
 
         config_file << "{ \"token\": \"your_bot_token_here\" }";
-        fixedphilip::log::info("Config file created - modify it before running the program again. Exiting...");
+        fixedphilip::log::info("Config file created - modify it before running the program again. Shutting down...");
         return 1;
     }
 
@@ -41,7 +41,7 @@ int main(int argc, char const *argv[])
         std::ifstream config_file(config_file_name);
         if (!config_file)
         {
-            fixedphilip::log::error("Failed to read the config file! Exiting...");
+            fixedphilip::log::error("Failed to read the config file! Shutting down...");
             return 1;
         }
 
@@ -87,5 +87,6 @@ int main(int argc, char const *argv[])
 
     bot.start(dpp::st_wait);
 
+    fixedphilip::log::info("Cluster shards terminated. Shutting down...");
     return 0;
 }

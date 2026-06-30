@@ -1,8 +1,7 @@
-#include <format>
-
 #include <fixedphilip/command.h>
 #include <fixedphilip/version.h>
 #include <fixedphilip/utils/stopwatch.h>
+#include <fixedphilip/log.h>
 
 #include <dpp/dpp.h>
 
@@ -35,6 +34,7 @@ namespace status
         }
         else
         {
+            fixedphilip::log::warning("status command: cluster was null");
             event.reply(std::format(
                 "### Running fixedphilip {} ({}):\n"
                 "- Uptime: {:%T}\n"
