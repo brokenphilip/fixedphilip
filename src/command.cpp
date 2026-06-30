@@ -6,74 +6,74 @@ namespace fixedphilip
 {
 	command::command(const char* name, const char* description, run_function* run)
 	{
-		_name = name;
-		_description = description;
-		_run = run;
+		name_ = name;
+		description_ = description;
+		run_ = run;
 
 		// if the linked list is empty, we're the first command
-		if (!_first)
+		if (!first_)
 		{
-			_first = this;
-			_last = this;
+			first_ = this;
+			last_ = this;
 			return;
 		}
 
-		command* current_iter = _first;
+		command* current_iter = first_;
 		command* previous_iter = nullptr;
 		while (current_iter)
 		{
 			// does our command alphabetically precede the currently iterated command?
-			if (strcmp(name, current_iter->_name) < 0)
+			if (strcmp(name, current_iter->name_) < 0)
 			{
 				// squeeze inbetween the two commands
-				_next = current_iter;
-				_prev = previous_iter;
+				next_ = current_iter;
+				prev_ = previous_iter;
 
 				// now update the two commands we squeezed between
-				current_iter->_prev = this;
+				current_iter->prev_ = this;
 				if (previous_iter)
 				{
-					previous_iter->_next = this;
+					previous_iter->next_ = this;
 				}
 				else
 				{
 					// no previous iterator - we're the first command
-					_first = this;
+					first_ = this;
 				}
 				return;
 			}
 
 			// it does not, so proceed with next iteration
 			previous_iter = current_iter;
-			current_iter = current_iter->_next;
+			current_iter = current_iter->next_;
 		}
 
 		// we are the last command
-		_prev = previous_iter;
-		previous_iter->_next = this;
-		_last = this;
+		prev_ = previous_iter;
+		previous_iter->next_ = this;
+		last_ = this;
 	}
 
 	command::~command()
 	{
-		if (_prev)
+		if (prev_)
 		{
-			_prev->_next = _next;
+			prev_->next_ = next_;
 		}
 		else
 		{
 			// no previous command - we're the first
-			_first = _next;
+			first_ = next_;
 		}
 
-		if (_next)
+		if (next_)
 		{
-			_next->_prev = _prev;
+			next_->prev_ = prev_;
 		}
 		else
 		{
 			// no following command - we're the last
-			_last = _prev;
+			last_ = prev_;
 		}
 	}
 }

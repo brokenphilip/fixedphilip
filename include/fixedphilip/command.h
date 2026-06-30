@@ -9,30 +9,30 @@ namespace fixedphilip
 	public:
 		using run_function = void(const dpp::slashcommand_t& event);
 	private:
-		static inline command* _first = nullptr;
-		static inline command* _last = nullptr;
+		static inline command* first_ = nullptr;
+		static inline command* last_ = nullptr;
 
-		command* _prev = nullptr;
-		command* _next = nullptr;
+		command* prev_ = nullptr;
+		command* next_ = nullptr;
 
-		const char* _name;
-		const char* _description;
+		const char* name_;
+		const char* description_;
 
-		run_function* _run;
+		run_function* run_;
 	public:
 		command(const char* name, const char* description, run_function* run);
 		~command();
 
-		inline auto previous() { return _prev; }
-		inline auto next() { return _next; }
+		inline auto previous() { return prev_; }
+		inline auto next() { return next_; }
 
-		inline auto name() { return _name; }
-		inline auto description() { return _description; }
+		inline auto name() { return name_; }
+		inline auto description() { return description_; }
 
-		inline auto run(const dpp::slashcommand_t& event) { _run(event); }
+		inline auto run(const dpp::slashcommand_t& event) { run_(event); }
 
-		static inline auto first() { return _first; }
-		static inline auto last() { return _last; }
+		static inline auto first() { return first_; }
+		static inline auto last() { return last_; }
 	};
 }
 
