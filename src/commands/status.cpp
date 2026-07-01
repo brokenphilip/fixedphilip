@@ -12,9 +12,16 @@ namespace status
 
     }
 
-    void run(const dpp::slashcommand_t& event)
+    void run(const fixedphilip::command::run_event& event)
     {
-        auto cluster = event.owner;
+        auto event_dispatch = event.get_event_dispatch();
+        if (!event_dispatch)
+        {
+            fixedphilip::log::error("status command: event_dispatch was null");
+        }
+
+        auto shard = event_dispatch->shard;
+        auto cluster = event_dispatch->owner;
         if (cluster)
         {
             event.reply(std::format(
@@ -23,25 +30,26 @@ namespace status
                 "- Cluster: {}\n"
                 "  - Total shards: {}\n"
                 "- Shard: {}\n"
-                "- Ping: {}",
+                "- Ping: {} ms",
                 fixedphilip::build_version(), fixedphilip::build_date_time(),
                 std::chrono::seconds(fixedphilip::utils::app_uptime.elapsed<std::chrono::seconds>()),
                 cluster->cluster_id,
                 cluster->numshards,
-                event.shard,
+                shard,
                 static_cast<int>(cluster->rest_ping * 1000)
             ));
         }
         else
         {
-            fixedphilip::log::warning("status command: cluster was null");
+            fixedphilip::log::error("status command: cluster was null");
+
             event.reply(std::format(
                 "### Running fixedphilip {} ({}):\n"
                 "- Uptime: {:%T}\n"
                 "- Shard: {}",
                 fixedphilip::build_version(), fixedphilip::build_date_time(),
                 std::chrono::seconds(fixedphilip::utils::app_uptime.elapsed<std::chrono::seconds>()),
-                event.shard
+                shard
             ));
         }
     }

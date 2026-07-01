@@ -10,9 +10,15 @@ namespace ping
 
     }
 
-    void run(const dpp::slashcommand_t& event)
+    void run(const fixedphilip::command::run_event& event)
     {
-        auto cluster = event.owner;
+        auto event_dispatch = event.get_event_dispatch();
+        if (!event_dispatch)
+        {
+            fixedphilip::log::error("ping command: event_dispatch was null");
+        }
+
+        auto cluster = event.get_event_dispatch()->owner;
         if (cluster)
         {
             event.reply(std::format("Pong! :3 ({} ms)", static_cast<int>(cluster->rest_ping * 1000)));

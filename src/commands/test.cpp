@@ -17,20 +17,27 @@ namespace test
 		);
 	}
 
-	void run(const dpp::slashcommand_t& event)
+	void run(const fixedphilip::command::run_event& event)
 	{
-		auto subcmd = event.command.get_command_interaction().options[0];
-		if (subcmd.name == "mention")
+		if (auto slash_command = event.get_slash_command())
 		{
-			if (subcmd.options.empty())
+			auto sub_command = slash_command->command.get_command_interaction().options[0];
+			if (sub_command.name == "mention")
 			{
-				event.reply("No user specified");
+				if (sub_command.options.empty())
+				{
+					slash_command->reply("No user specified");
+				}
+				else
+				{
+					auto user = slash_command->command.get_resolved_user(sub_command.get_value<dpp::snowflake>(0));
+					slash_command->reply("Mentioning " + user.get_mention());
+				}
 			}
-			else
-			{
-				auto user = event.command.get_resolved_user(subcmd.get_value<dpp::snowflake>(0));
-				event.reply("Mentioning " + user.get_mention());
-			}
+		}
+		else if (auto message_create = event.get_message_create())
+		{
+			message_create->reply("Not implemented, use `/test` instead.");
 		}
 	}
 }

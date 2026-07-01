@@ -9,15 +9,25 @@
 #include <fixedphilip/log.h>
 #include <fixedphilip/utils/stopwatch.h>
 
+#ifdef _WIN32
+const char* hi = "idk";
+#endif
+
+#ifdef __linux__
+const char* hello = "what";
+#endif
+
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.
  * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
  */
 
+const char* prefix_temp = "fp!";
+
 int main(int argc, char const *argv[])
 {
     fixedphilip::utils::app_uptime.start();
-    fixedphilip::log::info(std::format("fixedphilip {} ({}) by brokenphilip", fixedphilip::build_version(), fixedphilip::build_date_time()));
+    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", fixedphilip::build_version(), fixedphilip::build_date_time()));
 
     const char* config_file_name = "config.json";
     if (!std::filesystem::exists(config_file_name))
@@ -49,12 +59,30 @@ int main(int argc, char const *argv[])
     }
 
     std::string token = config["token"];
-    dpp::cluster bot(token);
+    dpp::cluster bot(token, dpp::i_default_intents | dpp::i_message_content);
 
     //dpp::utility::bot_invite_url();
     //fixedphilip::dpp_cout_log(dpp::loglevel::ll_info, bot.invite
 
     bot.on_log(dpp::utility::cout_logger());
+
+    // requires the "Message Content" privileged intent to be enabled on the bot
+    bot.on_message_create([&bot](const dpp::message_create_t& event)
+    {
+        auto iter = fixedphilip::command::first();
+        while (iter)
+        {
+            auto command = std::format("{}{}", prefix_temp, iter->name());
+
+            // old-style prefix commands - discouraged by Discord, but still convenient to have
+            if (event.msg.content == command || event.msg.content.starts_with(command + " "))
+            {
+                iter->run(fixedphilip::command::run_event(event));
+                break;
+            }
+            iter = iter->next();
+        }
+    });
 
     bot.on_slashcommand([](const dpp::slashcommand_t& event)
     {
@@ -63,7 +91,7 @@ int main(int argc, char const *argv[])
         {
             if (event.command.get_command_name() == iter->name())
             {
-                iter->run(event);
+                iter->run(fixedphilip::command::run_event(event));
                 break;
             }
             iter = iter->next();
@@ -100,6 +128,17 @@ int main(int argc, char const *argv[])
                     {
                         fixedphilip::log::info(std::format("Deleting stale command '{}'...", value.name));
                         bot.global_command_delete(key);
+                    }
+                }
+                else
+                {
+                    if (result.is_error())
+                    {
+                        fixedphilip::log::error("idfk");
+                    }
+                    else
+                    {
+                        fixedphilip::log::error("global_commands_get: unknown error (result.value not of type slashcommand_map)");
                     }
                 }
             });
