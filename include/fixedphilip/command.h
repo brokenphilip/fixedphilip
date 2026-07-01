@@ -6,26 +6,19 @@
 #include <fixedphilip/node.h>
 
 #include <dpp/appcommand.h> // dpp::slashcommand
-#include <dpp/dispatcher.h> // dpp::slashcommand_t
+#include <dpp/dispatcher.h> // dpp::*_t events
 
 namespace fixedphilip
 {
 	class command : public node<command>
 	{
 	public:
-		using event_t = std::variant<dpp::slashcommand_t, dpp::message_create_t>;
+		using run_event_t = std::variant<dpp::slashcommand_t, dpp::message_create_t>;
 
-		struct run_event : public event_t
+		struct run_event : public run_event_t
 		{
-			inline auto get_slash_command() const
-			{
-				return std::get_if<dpp::slashcommand_t>(this);
-			}
-
-			inline auto get_message_create() const
-			{
-				return std::get_if<dpp::message_create_t>(this);
-			}
+			inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
+			inline auto get_message_create() const { return std::get_if<dpp::message_create_t>(this); }
 
 			inline auto get_event_dispatch() const
 			{
@@ -51,11 +44,7 @@ namespace fixedphilip
 					message_create->reply(msg, false, callback);
 				}
 			}
-
-			inline void reply(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const
-			{
-				reply(dpp::message(msg), callback);
-			}
+			inline void reply(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { reply(dpp::message(msg), callback); }
 		};
 
 		using init_function = void(dpp::slashcommand& command);
@@ -76,10 +65,7 @@ namespace fixedphilip
 		inline auto init(dpp::slashcommand& command) { init_(command); }
 		inline auto run(const run_event& event) { run_(event); }
 
-		inline virtual bool compare_nodes(command* current, command* next) override final
-		{
-			return strcmp(current->name_, next->name_) < 0;
-		}
+		inline virtual bool compare_nodes(command* current, command* next) override final { return strcmp(current->name_, next->name_) < 0; }
 	};
 }
 

@@ -56,7 +56,7 @@ namespace fixedphilip
 			}
 		};
 
-		// Global stopwatch measuring application uptime
-		inline stopwatch app_uptime;
+		// Global stopwatch measuring program uptime
+		inline stopwatch program_uptime;
 	}
 }

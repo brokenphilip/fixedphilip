@@ -32,7 +32,7 @@ namespace status
                 "- Shard: {}\n"
                 "- Ping: {} ms",
                 fixedphilip::build_version(), fixedphilip::build_date_time(),
-                std::chrono::seconds(fixedphilip::utils::app_uptime.elapsed<std::chrono::seconds>()),
+                std::chrono::seconds(fixedphilip::utils::program_uptime.elapsed<std::chrono::seconds>()),
                 cluster->cluster_id,
                 cluster->numshards,
                 shard,
@@ -48,7 +48,7 @@ namespace status
                 "- Uptime: {:%T}\n"
                 "- Shard: {}",
                 fixedphilip::build_version(), fixedphilip::build_date_time(),
-                std::chrono::seconds(fixedphilip::utils::app_uptime.elapsed<std::chrono::seconds>()),
+                std::chrono::seconds(fixedphilip::utils::program_uptime.elapsed<std::chrono::seconds>()),
                 shard
             ));
         }

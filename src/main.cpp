@@ -26,8 +26,8 @@ const char* prefix_temp = "fp!";
 
 int main(int argc, char const *argv[])
 {
-    fixedphilip::utils::app_uptime.start();
-    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", fixedphilip::build_version(), fixedphilip::build_date_time()));
+    fixedphilip::utils::program_uptime.start();
+    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", fixedphilip::build_version()/*, fixedphilip::build_date_time()*/));
 
     const char* config_file_name = "config.json";
     if (!std::filesystem::exists(config_file_name))
@@ -61,28 +61,59 @@ int main(int argc, char const *argv[])
     std::string token = config["token"];
     dpp::cluster bot(token, dpp::i_default_intents | dpp::i_message_content);
 
+    bool restart = false;
+    bot.current_application_get([&bot, &restart](const dpp::confirmation_callback_t& result)
+    {
+        if (auto app = std::get_if<dpp::application>(&result.value))
+        {
+            if (!(app->flags & dpp::apf_gateway_message_content_limited) && !(app->flags & dpp::apf_gateway_message_content))
+            {
+                fixedphilip::log::warning
+                (
+                    "The 'Message Content' privileged intent is not enabled for this application. "
+                    "Features that require 'on_message_create' (when a message is sent) or 'on_message_update' "
+                    "(when a message is edited), such as old-style prefix commands, will not work for this session. "
+                    "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
+                );
+                bot.intents &= ~dpp::i_message_content;
+
+                // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
+                for (auto& shard : bot.get_shards())
+                {
+                    auto client = shard.second;
+                    if (client)
+                    {
+                        client->intents &= ~dpp::i_message_content;
+                    }
+                }
+            }
+            else
+            {
+                // requires the "Message Content" privileged intent to be enabled on the bot
+                bot.on_message_create([&bot](const dpp::message_create_t& event)
+                {
+                    auto iter = fixedphilip::command::first();
+                    while (iter)
+                    {
+                        auto command = std::format("{}{}", prefix_temp, iter->name());
+
+                        // old-style prefix commands - discouraged by Discord, but still convenient to have
+                        if (event.msg.content == command || event.msg.content.starts_with(command + " "))
+                        {
+                            iter->run(fixedphilip::command::run_event(event));
+                            break;
+                        }
+                        iter = iter->next();
+                    }
+                });
+            }
+        }
+    });
+
     //dpp::utility::bot_invite_url();
     //fixedphilip::dpp_cout_log(dpp::loglevel::ll_info, bot.invite
 
     bot.on_log(dpp::utility::cout_logger());
-
-    // requires the "Message Content" privileged intent to be enabled on the bot
-    bot.on_message_create([&bot](const dpp::message_create_t& event)
-    {
-        auto iter = fixedphilip::command::first();
-        while (iter)
-        {
-            auto command = std::format("{}{}", prefix_temp, iter->name());
-
-            // old-style prefix commands - discouraged by Discord, but still convenient to have
-            if (event.msg.content == command || event.msg.content.starts_with(command + " "))
-            {
-                iter->run(fixedphilip::command::run_event(event));
-                break;
-            }
-            iter = iter->next();
-        }
-    });
 
     bot.on_slashcommand([](const dpp::slashcommand_t& event)
     {
@@ -158,6 +189,6 @@ int main(int argc, char const *argv[])
     bot.start(dpp::st_wait);
 
     fixedphilip::log::info("Cluster shards terminated. Shutting down...");
-    fixedphilip::utils::app_uptime.stop();
+    fixedphilip::utils::program_uptime.stop();
     return 0;
 }
