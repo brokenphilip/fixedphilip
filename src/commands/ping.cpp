@@ -16,6 +16,7 @@ namespace ping
         if (!event_dispatch)
         {
             fixedphilip::log::error("ping command: event_dispatch was null");
+            return;
         }
 
         auto cluster = event.get_event_dispatch()->owner;

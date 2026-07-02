@@ -18,6 +18,7 @@ namespace status
         if (!event_dispatch)
         {
             fixedphilip::log::error("status command: event_dispatch was null");
+            return;
         }
 
         auto shard = event_dispatch->shard;
