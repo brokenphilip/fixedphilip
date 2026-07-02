@@ -1,11 +1,16 @@
 # fixedphilip
+<img src="https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png?size=256" align="right">
+
 fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library.
 
 > [!NOTE]
 > This repository is currently an **early work-in-progress**, any and all information is subject to change without notice and may be missing or incorrect.
 
 > [!IMPORTANT]
-> Currently, the bot is designed for **personal use only** - feature requests will likely not be considered for the forseeable future.
+> Currently, the bot is designed for **personal use only**:
+> - I will not be providing a guild/user invite link for my own hosted instance, and
+> - Feature requests will likely not be considered for the forseeable future.
+<br clear="right"/>
 
 ## Running
 Upon your first launch, it will create a `config.json` with the following contents, and then exit:
