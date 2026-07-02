@@ -5,17 +5,9 @@
 #include <dpp/nlohmann/json.hpp>
 
 #include <fixedphilip/command.h>
-#include <fixedphilip/version.h>
+#include <fixedphilip/build.h>
 #include <fixedphilip/log.h>
 #include <fixedphilip/utils/stopwatch.h>
-
-#ifdef _WIN32
-const char* hi = "idk";
-#endif
-
-#ifdef __linux__
-const char* hello = "what";
-#endif
 
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.
@@ -27,7 +19,7 @@ const char* prefix_temp = "fp!";
 int main(int argc, char const *argv[])
 {
     fixedphilip::utils::program_uptime.start();
-    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", fixedphilip::build_version()/*, fixedphilip::build_date_time()*/));
+    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", fixedphilip::build::version()/*, fixedphilip::build_date_time()*/));
 
     const char* config_file_name = "config.json";
     if (!std::filesystem::exists(config_file_name))

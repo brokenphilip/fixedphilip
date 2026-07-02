@@ -3,14 +3,14 @@
 #include <cstring> // strcmp
 #include <variant>
 
-#include <fixedphilip/node.h>
+#include <fixedphilip/utils/node.h>
 
 #include <dpp/appcommand.h> // dpp::slashcommand
 #include <dpp/dispatcher.h> // dpp::*_t events
 
 namespace fixedphilip
 {
-	class command : public node<command>
+	class command : public utils::node<command>
 	{
 	public:
 		using run_event_t = std::variant<dpp::slashcommand_t, dpp::message_create_t>;

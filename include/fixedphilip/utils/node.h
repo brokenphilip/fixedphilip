@@ -1,5 +1,5 @@
 
-namespace fixedphilip
+namespace fixedphilip::utils
 {
 	template <typename T>
 	class node
