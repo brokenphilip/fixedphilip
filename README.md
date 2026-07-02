@@ -10,7 +10,6 @@ fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D+
 > Currently, the bot is designed for **personal use only**:
 > - I will not be providing a guild/user invite link for my own hosted instance, and
 > - Feature requests will likely not be considered for the forseeable future.
-<br clear="right"/>
 
 ## Running
 Upon your first launch, it will create a `config.json` with the following contents, and then exit:
