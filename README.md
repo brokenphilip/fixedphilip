@@ -1,5 +1,5 @@
 # fixedphilip
-<img src="https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png?size=200" align="right">
+<img src="https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png?size=128" align="right">
 
 fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library.
 
