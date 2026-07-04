@@ -84,10 +84,10 @@ namespace status
 
         auto embed = dpp::embed()
             .set_color(0x7F00FF)
-            .set_author(std::format("fixedphilip {} by brokenphilip", fixedphilip::build::version()), "https://github.com/brokenphilip/fixedphilip", "https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
-            .set_description(std::format("**Built on:** {}\n**Targets:** {}, {}, {}\n**Instance owner:** `{}`\n**Instance launched:** <t:{}:s>",
+            .set_author(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM), "https://github.com/brokenphilip/fixedphilip", "https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
+            .set_description(std::format("**Built on:** {}\n**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit\n**Instance owner:** `{}`\n**Instance launched:** <t:{}:s>",
                 fixedphilip::build::date_time(),
-                fixedphilip::build::platform(), fixedphilip::build::configuration(), fixedphilip::build::architecture(),
+                FIXEDPHILIP_BUILD_ARCHITECTURE_NUM,
                 owner,
                 unix_launch_time))
             .add_field("Ping", std::format("{} ms", static_cast<int>(cluster->rest_ping * 1000)), true)

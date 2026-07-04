@@ -19,7 +19,11 @@ const char* prefix_temp = "fp!";
 int main(int argc, char const *argv[])
 {
     fixedphilip::utils::program_uptime.start();
-    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", fixedphilip::build::version()/*, fixedphilip::build_date_time()*/));
+    fixedphilip::log::info("====================");
+    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
+    fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
+    fixedphilip::log::info(std::format("Targets " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", FIXEDPHILIP_BUILD_ARCHITECTURE_NUM));
+    fixedphilip::log::info("====================");
 
     const char* config_file_name = "config.json";
     if (!std::filesystem::exists(config_file_name))
