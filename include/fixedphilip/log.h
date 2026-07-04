@@ -2,14 +2,11 @@
 
 #include <string>
 
-namespace fixedphilip
+namespace fixedphilip::log
 {
-	namespace log
-	{
-		using log_function = void(std::string message);
+	using log_function = void(const std::string& message);
 
-		log_function info;
-		log_function warning;
-		log_function error;
-	}
+	log_function info;
+	log_function warning;
+	log_function error;
 }

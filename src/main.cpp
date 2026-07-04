@@ -74,6 +74,8 @@ int main(int argc, char const *argv[])
                 bot.intents &= ~dpp::i_message_content;
 
                 // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
+                // we don't need to reconnect them manually - they'll automatically reconnect anyways
+                // or, if we manage to update the intent before the initial connection, there won't be a need for a reconnect
                 for (auto& shard : bot.get_shards())
                 {
                     auto client = shard.second;

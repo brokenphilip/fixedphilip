@@ -7,7 +7,7 @@
 
 namespace fixedphilip::log
 {
-	void dpp_cout_log(dpp::loglevel severity, std::string message)
+	void dpp_cout_log(dpp::loglevel severity, const std::string& message)
 	{
 		if (severity > dpp::ll_trace)
 		{
@@ -15,17 +15,17 @@ namespace fixedphilip::log
 		}
 	}
 
-	void info(std::string message)
+	void info(const std::string& message)
 	{
 		dpp_cout_log(dpp::loglevel::ll_info, message);
 	}
 
-	void warning(std::string message)
+	void warning(const std::string& message)
 	{
 		dpp_cout_log(dpp::loglevel::ll_warning, message);
 	}
 
-	void error(std::string message)
+	void error(const std::string& message)
 	{
 		dpp_cout_log(dpp::loglevel::ll_error, message);
 	}
