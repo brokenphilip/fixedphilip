@@ -6,6 +6,8 @@
 
 #include <dpp/dpp.h>
 
+#include <coroutine>
+
 namespace status
 {
     void init(dpp::slashcommand& command)
@@ -16,8 +18,11 @@ namespace status
     void run(const fixedphilip::command::run_event& event)
     {
         auto& event_dispatch = event.get_event_dispatch();
+        auto slash_command = event.get_slash_command();
 
-        std::string uptime = "???";
+        event.thinking_start();
+
+        std::string uptime = "";
         auto program_uptime = std::chrono::seconds(fixedphilip::utils::program_uptime.elapsed<std::chrono::seconds>());
         if (program_uptime > std::chrono::days(1))
         {
@@ -47,40 +52,88 @@ namespace status
             return;
         }
 
-        uint32_t server_count = 0xFFFFFFFF;
-        uint32_t user_count = 0xFFFFFFFF;
-        for (auto& shard : cluster->get_shards())
+        std::string server_count = "?";
+        std::string user_count = "?";
+
+        auto guild_cache = dpp::get_guild_cache();
+        if (guild_cache)
         {
-            auto client = shard.second;
-            if (client)
+            std::vector<dpp::snowflake> users;
+
+            std::shared_lock _(guild_cache->get_mutex());
+            auto& guilds = guild_cache->get_container();
+            server_count = std::to_string(guilds.size());
+
+            // this fallback is used in case we lack the necessary intent for accurate results
+            int fallback_user_count_num = 0;
+
+            for (const auto& [guild_snowflake, guild] : guilds)
             {
-                server_count = client->get_guild_count();
-                //user_count = client->get_member_count();
-
+                if (!guild)
                 {
-                    uint64_t total = 0;
-                    dpp::cache<dpp::guild>* c = dpp::get_guild_cache();
-                    std::shared_lock l(c->get_mutex());
-                    std::unordered_map<dpp::snowflake, dpp::guild*>& gc = c->get_container();
-                    for (auto g = gc.begin(); g != gc.end(); ++g)
-                    {
-                        dpp::guild* gp = (dpp::guild*)g->second;
-                        fixedphilip::log::info(std::format("Guild: {}", gp->name));
-                        for (auto& member : gp->members)
-                        {
-                            std::string username = "???";
-                            if (auto user = member.second.get_user())
-                            {
-                                username = user->format_username();
-                            }
+                    continue;
+                }
 
-                            user_count++;
-                            fixedphilip::log::info(std::format("User #{}: {}", user_count, username));
-                        }
-                    }
+                fallback_user_count_num += guild->member_count;
 
+                for (const auto& [member_snowflake, member] : guild->members)
+                {
+                    users.push_back(member_snowflake);
                 }
             }
+
+            std::sort(users.begin(), users.end());
+            auto last = std::unique(users.begin(), users.end());
+            users.erase(last, users.end());
+            int user_count_num = users.size();
+
+            // cache these numbers for later use
+            static int user_install_count = 0;
+            static bool has_guild_members_intent = true;
+
+            // do not call more than once per day
+            static fixedphilip::utils::stopwatch last_api_call;
+            if (last_api_call.elapsed<std::chrono::minutes>() > 1440 || !last_api_call.running())
+            {
+                // TODO: fix coroutines
+                /*
+                auto async_result = cluster->co_current_application_get();
+                auto result = async_result.sync_wait_for(std::chrono::seconds(5));
+                
+                if (result)
+                {
+                    fixedphilip::discord::command_completion_event<dpp::application>("status.cpp, co_current_application_get", [](const auto& app)
+                    {
+                        user_install_count = app.approximate_user_install_count;
+                        has_guild_members_intent = (app.flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
+
+                        last_api_call.reset();
+                        last_api_call.start();
+                    })
+                    (result.value());
+                }*/
+
+                cluster->current_application_get(fixedphilip::discord::command_completion_event<dpp::application>("status.cpp, current_application_get", [](const auto& app)
+                {
+                    user_install_count = app.approximate_user_install_count;
+                    has_guild_members_intent = (app.flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
+
+                    last_api_call.reset();
+                    last_api_call.start();
+                }));
+
+                // TODO fucking nuke me
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+            }
+
+            // add the approximate amount of 'User Install' users, even if they might not be unique
+            user_count_num += user_install_count;
+
+            if (!has_guild_members_intent)
+            {
+                user_count_num += fallback_user_count_num;
+            }
+            user_count = std::format("{}{}", has_guild_members_intent ? "" : "~", user_count_num);
         }
 
         auto embed = dpp::embed()
@@ -92,8 +145,8 @@ namespace status
                 fixedphilip::discord::instance_owner.format_username(),
                 std::chrono::duration_cast<std::chrono::seconds>(fixedphilip::utils::program_start.time_since_epoch()).count()))
             .add_field("Ping", std::format("{} ms", static_cast<int>(cluster->rest_ping * 1000)), true)
-            .add_field("Servers", std::to_string(server_count), true)
-            .add_field("Users", std::to_string(user_count), true)
+            .add_field("Servers", server_count, true)
+            .add_field("Users", user_count, true)
             .add_field("Cluster #", cluster ? std::format("`{}`", cluster->cluster_id) : "N/A", true)
             .add_field("Shards", cluster ? std::to_string(cluster->numshards) : "N/A", true)
             .add_field("Shard #", std::format("`{}`", shard), true)
@@ -108,7 +161,7 @@ namespace status
             .add_field("Total disk uage", "???", true);
 
         auto msg = dpp::message(embed);
-        event.reply(msg);
+        event.thinking_end(msg);
     }
 }
 

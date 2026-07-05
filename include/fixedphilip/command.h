@@ -7,6 +7,7 @@
 
 #include <dpp/appcommand.h> // dpp::slashcommand
 #include <dpp/dispatcher.h> // dpp::*_t events
+#include <dpp/cluster.h>
 
 namespace fixedphilip
 {
@@ -39,6 +40,30 @@ namespace fixedphilip
 				}
 			}
 			inline void reply(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { reply(dpp::message(msg), callback); }
+
+			inline void thinking_start() const
+			{
+				if (auto slash_command = get_slash_command())
+				{
+					slash_command->thinking();
+				}
+				else if (auto message_create = get_message_create())
+				{
+					message_create->owner->channel_typing(message_create->msg.channel_id);
+				}
+			}
+
+			inline void thinking_end(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const
+			{
+				if (auto slash_command = get_slash_command())
+				{
+					slash_command->edit_original_response(msg, callback);
+				}
+				else if (auto message_create = get_message_create())
+				{
+					message_create->reply(msg, false, callback);
+				}
+			}
 		};
 
 		using init_function = void(dpp::slashcommand& command);
