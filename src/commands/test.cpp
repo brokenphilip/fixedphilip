@@ -6,7 +6,7 @@ namespace test
 {
 	void init(dpp::slashcommand& command)
 	{
-		command.set_nsfw(true);
+		command.set_nsfw(false);
 
 		command.add_option
 		(
