@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <format>
 
 #include <dpp/dpp.h>
@@ -8,15 +7,16 @@
 #include <fixedphilip/build.h>
 #include <fixedphilip/log.h>
 #include <fixedphilip/utils/stopwatch.h>
+#include <fixedphilip/utils/file.h>
 
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.
  * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
  */
 
-const char* prefix_temp = "fp!";
+#define FIXEDPHILIP_DEFAULT_TOKEN "your_bot_token_here"
 
-int main(int argc, char const *argv[])
+int main(/*int argc, char const* argv[]*/)
 {
     fixedphilip::utils::program_uptime.start();
     fixedphilip::log::info("====================");
@@ -25,44 +25,79 @@ int main(int argc, char const *argv[])
     fixedphilip::log::info(std::format("Targets " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", FIXEDPHILIP_BUILD_ARCHITECTURE_NUM));
     fixedphilip::log::info("====================");
 
-    const char* config_file_name = "config.json";
-    if (!std::filesystem::exists(config_file_name))
+    struct config_ : public fixedphilip::file::json_pretty_print
     {
-        fixedphilip::log::warning(std::format("Configuration file not found - creating '{}'...", config_file_name));
+        std::string token = FIXEDPHILIP_DEFAULT_TOKEN;
+        std::string prefix = "fp!";
 
-        std::ofstream config_file(config_file_name);
-        if (!config_file)
+        virtual nlohmann::json struct_to_json() override final
         {
-            fixedphilip::log::error("Failed to create the config file! Shutting down...");
-            return 1;
+            return
+            {
+                { "token", token },
+                { "prefix", prefix },
+            };
         }
+        virtual bool json_to_struct(const nlohmann::json& data) override final
+        {
+            try_at(data, "token", token);
+            try_at(data, "prefix", prefix);
 
-        config_file << "{ \"token\": \"your_bot_token_here\" }";
-        fixedphilip::log::info("Config file created - modify it before running the program again. Shutting down...");
+            // partial load is fine
+            return true;
+        }
+    } config;
+
+    fixedphilip::file::settings config_settings
+    {
+        .filename = "config.json",
+        .create_if_not_found = true,
+        .log = true,
+    };
+
+    config.load(config_settings);
+
+    std::string token = config.token;
+    if (token == FIXEDPHILIP_DEFAULT_TOKEN || token.empty())
+    {
+        fixedphilip::log::error("Token not set in config file - exiting...");
         return 1;
     }
 
-    nlohmann::json config;
+    std::string prefix = config.prefix;
+    if (prefix.empty())
     {
-        std::ifstream config_file(config_file_name);
-        if (!config_file)
-        {
-            fixedphilip::log::error("Failed to read the config file! Shutting down...");
-            return 1;
-        }
-
-        config_file >> config;
+        fixedphilip::log::info("Old-style commands disabled (prefix is blank)");
     }
+    else
+    {
+        fixedphilip::log::info(std::format("Global prefix for old-style commands set to '{}'", prefix));
+    }
+    
+    config.save(config_settings);
 
-    std::string token = config["token"];
-    dpp::cluster bot(token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members);
+    dpp::cluster bot(config.token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members);
 
-    bool restart = false;
-    bot.current_application_get([&bot, &restart](const dpp::confirmation_callback_t& result)
+    bot.current_application_get([&bot, &prefix](const dpp::confirmation_callback_t& result)
     {
         if (auto app = std::get_if<dpp::application>(&result.value))
         {
-            if (!(app->flags & dpp::apf_gateway_message_content_limited) && !(app->flags & dpp::apf_gateway_message_content))
+            uint32_t disabled_intents = 0;
+
+            if (!(app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members)))
+            {
+                fixedphilip::log::warning
+                (
+                    "The 'Guild Members' privileged intent is not enabled for this application. "
+                    "Features that require 'on_guild_member_add/remove' (when users join or leave a server), "
+                    "'on_guild_member_update' (when a user's server info is updated) or complete member lists of servers, "
+                    "such as displaying accurate statistics as to how many users the bot is serving, will not work for this session. "
+                    "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
+                );
+                disabled_intents |= dpp::i_guild_members;
+            }
+
+            if (!(app->flags & (dpp::apf_gateway_message_content_limited | dpp::apf_gateway_message_content)))
             {
                 fixedphilip::log::warning
                 (
@@ -71,7 +106,35 @@ int main(int argc, char const *argv[])
                     "(when a message is edited), such as old-style prefix commands, will not work for this session. "
                     "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
                 );
-                bot.intents &= ~dpp::i_message_content;
+                disabled_intents |= dpp::i_message_content;
+            }
+            else
+            {
+                // requires the "Message Content" privileged intent to be enabled on the bot
+                bot.on_message_create([&bot, &prefix](const dpp::message_create_t& event)
+                {
+                    if (!prefix.empty())
+                    {
+                        auto iter = fixedphilip::command::first();
+                        while (iter)
+                        {
+                            auto command = std::format("{}{}", prefix, iter->name());
+
+                            // old-style prefix commands - discouraged by Discord, but still convenient to have
+                            if (event.msg.content == command || event.msg.content.starts_with(command + " "))
+                            {
+                                iter->run(fixedphilip::command::run_event(event));
+                                break;
+                            }
+                            iter = iter->next();
+                        }
+                    }
+                });
+            }
+
+            if (disabled_intents)
+            {
+                bot.intents &= ~disabled_intents;
 
                 // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
                 // we don't need to reconnect them manually - they'll automatically reconnect anyways
@@ -81,29 +144,9 @@ int main(int argc, char const *argv[])
                     auto client = shard.second;
                     if (client)
                     {
-                        client->intents &= ~dpp::i_message_content;
+                        client->intents &= ~disabled_intents;
                     }
                 }
-            }
-            else
-            {
-                // requires the "Message Content" privileged intent to be enabled on the bot
-                bot.on_message_create([&bot](const dpp::message_create_t& event)
-                {
-                    auto iter = fixedphilip::command::first();
-                    while (iter)
-                    {
-                        auto command = std::format("{}{}", prefix_temp, iter->name());
-
-                        // old-style prefix commands - discouraged by Discord, but still convenient to have
-                        if (event.msg.content == command || event.msg.content.starts_with(command + " "))
-                        {
-                            iter->run(fixedphilip::command::run_event(event));
-                            break;
-                        }
-                        iter = iter->next();
-                    }
-                });
             }
         }
     });
