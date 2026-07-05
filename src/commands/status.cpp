@@ -2,6 +2,7 @@
 #include <fixedphilip/build.h>
 #include <fixedphilip/utils/stopwatch.h>
 #include <fixedphilip/log.h>
+#include <fixedphilip/discord.h>
 
 #include <dpp/dpp.h>
 
@@ -51,15 +52,6 @@ namespace status
             return;
         }
 
-        std::string owner = "?";
-        cluster->current_application_get([&owner](const dpp::confirmation_callback_t& result)
-        {
-            if (auto app = std::get_if<dpp::application>(&result.value))
-            {
-                owner = app->owner.format_username();
-            }
-        });
-
         uint32_t server_count = 0xFFFFFFFF;
         uint32_t user_count = 0xFFFFFFFF;
         for (auto& shard : cluster->get_shards())
@@ -96,20 +88,14 @@ namespace status
             }
         }
 
-        // what a mouthful
-        auto current_time = fixedphilip::utils::stopwatch::clock::now();
-        auto current_uptime = std::chrono::seconds(fixedphilip::utils::program_uptime.elapsed<std::chrono::seconds>());
-        auto launch_time = current_time - current_uptime;
-        auto unix_launch_time = std::chrono::duration_cast<std::chrono::seconds>(launch_time.time_since_epoch()).count();
-
         auto embed = dpp::embed()
             .set_color(0x7F00FF)
             .set_author(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM), "https://github.com/brokenphilip/fixedphilip", "https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
             .set_description(std::format("**Built on:** {}\n**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit\n**Instance owner:** `{}`\n**Instance launched:** <t:{}:s>",
                 fixedphilip::build::date_time(),
                 FIXEDPHILIP_BUILD_ARCHITECTURE_NUM,
-                owner,
-                unix_launch_time))
+                fixedphilip::discord::instance_owner.format_username(),
+                std::chrono::duration_cast<std::chrono::seconds>(fixedphilip::utils::program_start.time_since_epoch()).count()))
             .add_field("Ping", std::format("{} ms", static_cast<int>(cluster->rest_ping * 1000)), true)
             .add_field("Servers", std::to_string(server_count), true)
             .add_field("Users", std::to_string(user_count), true)

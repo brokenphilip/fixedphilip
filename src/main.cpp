@@ -8,7 +8,7 @@
 #include <fixedphilip/log.h>
 #include <fixedphilip/utils/stopwatch.h>
 #include <fixedphilip/utils/file.h>
-#include <fixedphilip/utils/discord.h>
+#include <fixedphilip/discord.h>
 
 /* When you invite the bot, be sure to invite it with the
  * scopes 'bot' and 'applications.commands', e.g.
@@ -25,8 +25,10 @@ void wawa/*_impl*/(const dpp::confirmation_callback_t& result)
 
 int main(/*int argc, char const* argv[]*/)
 {
-    // 1. splash screen :3
     fixedphilip::utils::program_uptime.start();
+    fixedphilip::utils::program_start = std::chrono::system_clock::now();
+
+    // 1. splash screen :3
     fixedphilip::log::info("====================");
     fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
     fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
@@ -98,6 +100,9 @@ int main(/*int argc, char const* argv[]*/)
 
     bot.current_application_get(fixedphilip::discord::command_completion_event<dpp::application>("main.cpp, current_application_get", [&bot, &prefix](const auto& app)
     {
+        fixedphilip::discord::instance_owner = app.owner;
+        fixedphilip::log::info("Instance owner is: " + fixedphilip::discord::instance_owner.format_username());
+
         // check for any privileged intents - if we don't have permission to use them, disable them
         uint32_t disabled_intents = 0;
 

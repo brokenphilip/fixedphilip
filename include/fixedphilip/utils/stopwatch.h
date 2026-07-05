@@ -59,4 +59,7 @@ namespace fixedphilip::utils
 
 	// Global stopwatch measuring program uptime
 	inline stopwatch program_uptime;
+
+	// Time point when the program started
+	inline std::chrono::system_clock::time_point program_start;
 }
