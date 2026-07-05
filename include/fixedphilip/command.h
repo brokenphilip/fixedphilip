@@ -18,17 +18,13 @@ namespace fixedphilip
 			inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
 			inline auto get_message_create() const { return std::get_if<dpp::message_create_t>(this); }
 
-			inline auto get_event_dispatch() const
+			inline auto& get_event_dispatch() const
 			{
-				if (auto slash_command = get_slash_command())
+				return std::visit([](auto& event_dispatch) -> const dpp::event_dispatch_t&
 				{
-					return static_cast<const dpp::event_dispatch_t*>(slash_command);
-				}
-				else if (auto message_create = get_message_create())
-				{
-					return static_cast<const dpp::event_dispatch_t*>(message_create);
-				}
-				return static_cast<const dpp::event_dispatch_t*>(nullptr);
+					return event_dispatch;
+				}, 
+				*this);
 			}
 
 			inline void reply(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const

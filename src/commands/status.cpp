@@ -15,12 +15,7 @@ namespace status
 
     void run(const fixedphilip::command::run_event& event)
     {
-        auto event_dispatch = event.get_event_dispatch();
-        if (!event_dispatch)
-        {
-            fixedphilip::log::error("status command: event_dispatch was null");
-            return;
-        }
+        auto& event_dispatch = event.get_event_dispatch();
 
         std::string uptime = "???";
         auto program_uptime = std::chrono::seconds(fixedphilip::utils::program_uptime.elapsed<std::chrono::seconds>());
@@ -43,8 +38,8 @@ namespace status
             uptime = std::format("{:%Ss}", program_uptime);
         }
 
-        auto shard = event_dispatch->shard;
-        auto cluster = event_dispatch->owner;
+        auto shard = event_dispatch.shard;
+        auto cluster = event_dispatch.owner;
 
         if (!cluster)
         {
