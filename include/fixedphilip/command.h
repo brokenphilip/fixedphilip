@@ -13,9 +13,7 @@ namespace fixedphilip
 	class command : public utils::node<command>
 	{
 	public:
-		using run_event_t = std::variant<dpp::slashcommand_t, dpp::message_create_t>;
-
-		struct run_event : public run_event_t
+		struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t>
 		{
 			inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
 			inline auto get_message_create() const { return std::get_if<dpp::message_create_t>(this); }

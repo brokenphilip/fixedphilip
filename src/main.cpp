@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
 {
     fixedphilip::utils::program_uptime.start();
     fixedphilip::log::info("====================");
-    fixedphilip::log::info(std::format("Running fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
+    fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
     fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
     fixedphilip::log::info(std::format("Targets " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", FIXEDPHILIP_BUILD_ARCHITECTURE_NUM));
     fixedphilip::log::info("====================");
@@ -55,7 +55,7 @@ int main(int argc, char const *argv[])
     }
 
     std::string token = config["token"];
-    dpp::cluster bot(token, dpp::i_default_intents | dpp::i_message_content);
+    dpp::cluster bot(token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members);
 
     bool restart = false;
     bot.current_application_get([&bot, &restart](const dpp::confirmation_callback_t& result)
@@ -173,14 +173,16 @@ int main(int argc, char const *argv[])
             });
 
             // finally, register our commands
+            std::vector<dpp::slashcommand> commands;
             auto iter = fixedphilip::command::first();
             while (iter)
             {
-                dpp::slashcommand command(iter->name(), iter->description(), bot.me.id);
+                auto& command = commands.emplace_back(iter->name(), iter->description(), bot.me.id);
                 iter->init(command);
-                bot.global_command_create(command);
                 iter = iter->next();
             }
+            bot.global_bulk_command_create(commands);
+            fixedphilip::log::info(std::format("Registered {} commands", commands.size()));
         }
     });
 

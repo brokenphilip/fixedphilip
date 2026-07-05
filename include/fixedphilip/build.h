@@ -1,6 +1,6 @@
 #pragma once
 
-#define FIXEDPHILIP_BUILD_ARCHITECTURE_NUM (sizeof(void*) * 4)
+#define FIXEDPHILIP_BUILD_ARCHITECTURE_NUM (sizeof(void*) * 8)
 
 #ifdef NDEBUG
 #define FIXEDPHILIP_BUILD_CONFIGURATION "Release"

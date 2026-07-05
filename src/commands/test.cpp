@@ -37,7 +37,7 @@ namespace test
 		}
 		else if (auto message_create = event.get_message_create())
 		{
-			message_create->reply("Not implemented, use `/test` instead.");
+			message_create->reply("Not implemented, use the slash command instead.");
 		}
 	}
 }

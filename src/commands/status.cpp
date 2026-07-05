@@ -62,19 +62,39 @@ namespace status
 
         uint32_t server_count = 0xFFFFFFFF;
         uint32_t user_count = 0xFFFFFFFF;
-        cluster->current_user_get_guilds([&server_count, &user_count](const dpp::confirmation_callback_t& result)
+        for (auto& shard : cluster->get_shards())
         {
-            if (auto guild_map = std::get_if<dpp::guild_map>(&result.value))
+            auto client = shard.second;
+            if (client)
             {
-                for (auto& guild : *guild_map)
+                server_count = client->get_guild_count();
+                //user_count = client->get_member_count();
+
                 {
-                    server_count++;
-                    user_count += guild.second.member_count;
+                    uint64_t total = 0;
+                    dpp::cache<dpp::guild>* c = dpp::get_guild_cache();
+                    std::shared_lock l(c->get_mutex());
+                    std::unordered_map<dpp::snowflake, dpp::guild*>& gc = c->get_container();
+                    for (auto g = gc.begin(); g != gc.end(); ++g)
+                    {
+                        dpp::guild* gp = (dpp::guild*)g->second;
+                        fixedphilip::log::info(std::format("Guild: {}", gp->name));
+                        for (auto& member : gp->members)
+                        {
+                            std::string username = "???";
+                            if (auto user = member.second.get_user())
+                            {
+                                username = user->format_username();
+                            }
+
+                            user_count++;
+                            fixedphilip::log::info(std::format("User #{}: {}", user_count, username));
+                        }
+                    }
+
                 }
             }
-        });
-
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        }
 
         // what a mouthful
         auto current_time = fixedphilip::utils::stopwatch::clock::now();
