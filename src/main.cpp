@@ -1,19 +1,7 @@
-#include <format>
-
-#include <dpp/dpp.h>
-#include <dpp/nlohmann/json.hpp>
-
-#include <fixedphilip/command.h>
-#include <fixedphilip/build.h>
 #include <fixedphilip/log.h>
-#include <fixedphilip/utils/stopwatch.h>
-#include <fixedphilip/utils/file.h>
+#include <fixedphilip/build.h>
 #include <fixedphilip/discord.h>
-
-/* When you invite the bot, be sure to invite it with the
- * scopes 'bot' and 'applications.commands', e.g.
- * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
- */
+#include <fixedphilip/utils/stopwatch.h>
 
 int main()
 {

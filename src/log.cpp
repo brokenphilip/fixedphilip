@@ -3,7 +3,7 @@
 #include <iostream> // std::cout
 
 #include <dpp/misc-enum.h> // dpp::loglevel
-#include <dpp/utility.h>
+#include <dpp/utility.h> // dpp::utility::*
 
 namespace fixedphilip::log
 {

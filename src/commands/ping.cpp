@@ -1,8 +1,4 @@
 #include <fixedphilip/command.h>
-#include <fixedphilip/log.h>
-#include <fixedphilip/discord.h>
-
-#include <dpp/dpp.h>
 
 namespace ping
 {
@@ -18,4 +14,4 @@ namespace ping
     }
 }
 
-FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST ping");
+FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST ping", "v1");

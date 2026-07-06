@@ -1,14 +1,7 @@
 #pragma once
 
-#include <cstring> // strcmp
-#include <variant>
-
 #include <fixedphilip/utils/node.h>
 #include <fixedphilip/discord.h>
-
-#include <dpp/appcommand.h> // dpp::slashcommand
-#include <dpp/dispatcher.h> // dpp::*_t events
-#include <dpp/cluster.h>
 
 namespace fixedphilip
 {
@@ -99,17 +92,17 @@ namespace fixedphilip
 	private:
 		const char* name_;
 		const char* description_;
-		const char* last_modified_;
+		const char* version_;
 
 		init_function* init_;
 		run_function* run_;
 	public:
-		command(const char* name, const char* description, const char* last_modified, init_function* init, run_function* run) : name_(name), description_(description), last_modified_(last_modified), init_(init), run_(run) {}
+		command(const char* name, const char* description, const char* version, init_function* init, run_function* run) : name_(name), description_(description), version_(version), init_(init), run_(run) {}
 		~command() {}
 
 		inline auto name() { return name_; }
 		inline auto description() { return description_; }
-		inline auto last_modified() { return last_modified_; }
+		inline auto version() { return version_; }
 
 		inline auto init(dpp::slashcommand& command) { init_(command); }
 		inline dpp::task<void> run(const run_event& event)
@@ -128,4 +121,4 @@ namespace fixedphilip
 	};
 }
 
-#define FIXEDPHILIP_COMMAND(name, description) static fixedphilip::command name##_(#name, description, __DATE__ " " __TIME__, &name::init, &name::run)
+#define FIXEDPHILIP_COMMAND(name, description, version) static fixedphilip::command name##_(#name, description, version, &name::init, &name::run)

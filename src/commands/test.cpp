@@ -1,7 +1,5 @@
 #include <fixedphilip/command.h>
 
-#include <dpp/dpp.h>
-
 namespace test
 {
 	void init(dpp::slashcommand& command)
@@ -43,4 +41,4 @@ namespace test
 	}
 }
 
-FIXEDPHILIP_COMMAND(test, "Test command");
+FIXEDPHILIP_COMMAND(test, "Test command", "v1");

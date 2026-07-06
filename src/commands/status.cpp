@@ -1,12 +1,7 @@
 #include <fixedphilip/command.h>
+
 #include <fixedphilip/build.h>
 #include <fixedphilip/utils/stopwatch.h>
-#include <fixedphilip/log.h>
-#include <fixedphilip/discord.h>
-
-#include <dpp/dpp.h>
-
-#include <coroutine>
 
 namespace status
 {
@@ -142,4 +137,4 @@ namespace status
     }
 }
 
-FIXEDPHILIP_COMMAND(status, "Check bot status");
+FIXEDPHILIP_COMMAND(status, "Check bot status", "v1");

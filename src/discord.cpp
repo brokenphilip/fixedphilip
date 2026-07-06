@@ -1,4 +1,5 @@
 #include <fixedphilip/discord.h>
+
 #include <fixedphilip/command.h>
 
 dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_create_t& event)
@@ -48,14 +49,14 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
             // the command cache contains when each command was last modified
             struct command_cache_ : public fixedphilip::file::json_pretty_print
             {
-                std::unordered_map<std::string, std::string> command_last_modified_map;
+                std::unordered_map<std::string, std::string> command_version_map;
 
                 virtual nlohmann::json struct_to_json() override final
                 {
                     nlohmann::json data;
-                    for (const auto& [command, last_modified] : command_last_modified_map)
+                    for (const auto& [command, version] : command_version_map)
                     {
-                        data[command] = last_modified;
+                        data[command] = version;
                     }
                     return data;
                 }
@@ -64,7 +65,7 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
                     auto iter = fixedphilip::command::first();
                     while (iter)
                     {
-                        try_at(data, iter->name(), command_last_modified_map[iter->name()]);
+                        try_at(data, iter->name(), command_version_map[iter->name()]);
                         iter = iter->next();
                     }
                     return true;
@@ -85,23 +86,23 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
             while (iter)
             {
                 auto name = iter->name();
-                auto last_modified = iter->last_modified();
-                std::erase_if(command_map, [name, last_modified, &command_cache](const auto& item)
+                auto version = iter->version();
+                std::erase_if(command_map, [name, version, &command_cache](const auto& item)
                 {
                     auto command_name_match = !strncmp(name, item.second.name.c_str(), strlen(name));
                     if (command_name_match)
                     {
-                        // fetch the last modified date/time before we modify it
-                        auto last_modified_match = !strncmp(command_cache.command_last_modified_map[name].c_str(), last_modified, strlen(last_modified));
+                        // fetch the command version before we modify it
+                        auto version_match = !strncmp(command_cache.command_version_map[name].c_str(), version, strlen(version));
 
-                        if (!last_modified_match)
+                        if (!version_match)
                         {
-                            fixedphilip::log::info(std::format("Command '{}' last modified: {} -> {}", name, command_cache.command_last_modified_map[name], last_modified));
-                            command_cache.command_last_modified_map[name] = last_modified;
+                            fixedphilip::log::info(std::format("Command '{}' version changed: {} -> {}", name, command_cache.command_version_map[name], version));
+                            command_cache.command_version_map[name] = version;
                         }
 
-                        // if both the command name and the last modified date/time match, the command is NOT stale - delete it from the map
-                        return last_modified_match;
+                        // if both the command name and version match, the command is NOT stale - delete it from the map
+                        return version_match;
                     }
                     return false;
                 });
