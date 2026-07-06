@@ -15,12 +15,12 @@ namespace status
 
     }
 
-    void run(const fixedphilip::command::run_event& event)
+    dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
     {
         auto& event_dispatch = event.get_event_dispatch();
         auto slash_command = event.get_slash_command();
 
-        event.thinking_start();
+        auto thinking = event.co_thinking_start();
 
         std::string uptime = "";
         auto program_uptime = std::chrono::seconds(fixedphilip::utils::program_uptime.elapsed<std::chrono::seconds>());
@@ -44,13 +44,8 @@ namespace status
         }
 
         auto shard = event_dispatch.shard;
-        auto cluster = event_dispatch.owner;
 
-        if (!cluster)
-        {
-            fixedphilip::log::error("status command: cluster was null");
-            return;
-        }
+        auto& cluster = bot.cluster();
 
         std::string server_count = "?";
         std::string user_count = "?";
@@ -95,35 +90,15 @@ namespace status
             static fixedphilip::utils::stopwatch last_api_call;
             if (last_api_call.elapsed<std::chrono::minutes>() > 1440 || !last_api_call.running())
             {
-                // TODO: fix coroutines
-                /*
-                auto async_result = cluster->co_current_application_get();
-                auto result = async_result.sync_wait_for(std::chrono::seconds(5));
-                
-                if (result)
+                auto result = co_await cluster.co_current_application_get();
+                if (auto app = fixedphilip::discord::get_if<dpp::application>("status command, co_current_application_get", result))
                 {
-                    fixedphilip::discord::command_completion_event<dpp::application>("status.cpp, co_current_application_get", [](const auto& app)
-                    {
-                        user_install_count = app.approximate_user_install_count;
-                        has_guild_members_intent = (app.flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
-
-                        last_api_call.reset();
-                        last_api_call.start();
-                    })
-                    (result.value());
-                }*/
-
-                cluster->current_application_get(fixedphilip::discord::command_completion_event<dpp::application>("status.cpp, current_application_get", [](const auto& app)
-                {
-                    user_install_count = app.approximate_user_install_count;
-                    has_guild_members_intent = (app.flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
+                    user_install_count = app->approximate_user_install_count;
+                    has_guild_members_intent = (app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
 
                     last_api_call.reset();
                     last_api_call.start();
-                }));
-
-                // TODO fucking nuke me
-                std::this_thread::sleep_for(std::chrono::seconds(5));
+                }
             }
 
             // add the approximate amount of 'User Install' users, even if they might not be unique
@@ -142,13 +117,13 @@ namespace status
             .set_description(std::format("**Built on:** {}\n**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit\n**Instance owner:** `{}`\n**Instance launched:** <t:{}:s>",
                 fixedphilip::build::date_time(),
                 FIXEDPHILIP_BUILD_ARCHITECTURE_NUM,
-                fixedphilip::discord::instance_owner.format_username(),
+                fixedphilip::discord::bot::get_instance()->app_owner().format_username(),
                 std::chrono::duration_cast<std::chrono::seconds>(fixedphilip::utils::program_start.time_since_epoch()).count()))
-            .add_field("Ping", std::format("{} ms", static_cast<int>(cluster->rest_ping * 1000)), true)
+            .add_field("Ping", std::format("{} ms", static_cast<int>(cluster.rest_ping * 1000)), true)
             .add_field("Servers", server_count, true)
             .add_field("Users", user_count, true)
-            .add_field("Cluster #", cluster ? std::format("`{}`", cluster->cluster_id) : "N/A", true)
-            .add_field("Shards", cluster ? std::to_string(cluster->numshards) : "N/A", true)
+            .add_field("Cluster #", std::format("`{}`", cluster.cluster_id), true)
+            .add_field("Shards", std::to_string(cluster.numshards), true)
             .add_field("Shard #", std::format("`{}`", shard), true)
             .add_field("Uptime", uptime, true)
             .add_field("CPU usage", "???", true)
@@ -161,6 +136,8 @@ namespace status
             .add_field("Total disk uage", "???", true);
 
         auto msg = dpp::message(embed);
+
+        co_await thinking;
         event.thinking_end(msg);
     }
 }

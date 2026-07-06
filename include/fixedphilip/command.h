@@ -4,6 +4,7 @@
 #include <variant>
 
 #include <fixedphilip/utils/node.h>
+#include <fixedphilip/discord.h>
 
 #include <dpp/appcommand.h> // dpp::slashcommand
 #include <dpp/dispatcher.h> // dpp::*_t events
@@ -41,6 +42,20 @@ namespace fixedphilip
 			}
 			inline void reply(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { reply(dpp::message(msg), callback); }
 
+			inline dpp::async<dpp::confirmation_callback_t> co_reply(const dpp::message& msg) const
+			{
+				if (auto slash_command = get_slash_command())
+				{
+					return slash_command->co_reply(msg);
+				}
+				else if (auto message_create = get_message_create())
+				{
+					return message_create->co_reply(msg);
+				}
+				return {}; // C4715, unreachable
+			}
+			inline dpp::async<dpp::confirmation_callback_t> co_reply(const std::string& msg) const { return co_reply(dpp::message(msg)); }
+
 			inline void thinking_start() const
 			{
 				if (auto slash_command = get_slash_command())
@@ -51,6 +66,19 @@ namespace fixedphilip
 				{
 					message_create->owner->channel_typing(message_create->msg.channel_id);
 				}
+			}
+
+			inline dpp::async<dpp::confirmation_callback_t> co_thinking_start() const
+			{
+				if (auto slash_command = get_slash_command())
+				{
+					return slash_command->co_thinking();
+				}
+				else if (auto message_create = get_message_create())
+				{
+					return message_create->owner->co_channel_typing(message_create->msg.channel_id);
+				}
+				return {}; // C4715, unreachable
 			}
 
 			inline void thinking_end(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const
@@ -67,7 +95,7 @@ namespace fixedphilip
 		};
 
 		using init_function = void(dpp::slashcommand& command);
-		using run_function = void(const run_event& event);
+		using run_function = dpp::task<void>(const run_event& event, fixedphilip::discord::bot& bot);
 	private:
 		const char* name_;
 		const char* description_;
@@ -84,7 +112,17 @@ namespace fixedphilip
 		inline auto last_modified() { return last_modified_; }
 
 		inline auto init(dpp::slashcommand& command) { init_(command); }
-		inline auto run(const run_event& event) { run_(event); }
+		inline dpp::task<void> run(const run_event& event)
+		{
+			auto bot = fixedphilip::discord::bot::get_instance();
+			if (!bot)
+			{
+				fixedphilip::log::error(std::format("{} command: bot was null", name_));
+				event.reply("An internal error occurred.");
+				co_return;
+			}
+			co_await run_(event, *bot);
+		}
 
 		inline virtual bool compare_nodes(command* current, command* next) override final { return strcmp(current->name_, next->name_) < 0; }
 	};

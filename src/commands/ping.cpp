@@ -1,5 +1,6 @@
 #include <fixedphilip/command.h>
 #include <fixedphilip/log.h>
+#include <fixedphilip/discord.h>
 
 #include <dpp/dpp.h>
 
@@ -10,18 +11,10 @@ namespace ping
 
     }
 
-    void run(const fixedphilip::command::run_event& event)
+    dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
     {
-        auto cluster = event.get_event_dispatch().owner;
-        if (cluster)
-        {
-            event.reply(std::format("Pong! :3 ({} ms)", static_cast<int>(cluster->rest_ping * 1000)));
-        }
-        else
-        {
-            fixedphilip::log::warning("ping command: cluster was null");
-            event.reply("Pong! :3");
-        }
+        event.reply(std::format("Pong! :3 ({} ms)", static_cast<int>(bot.cluster().rest_ping * 1000)));
+        co_return;
     }
 }
 

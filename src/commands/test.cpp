@@ -17,7 +17,7 @@ namespace test
 		);
 	}
 
-	void run(const fixedphilip::command::run_event& event)
+	dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
 	{
 		if (auto slash_command = event.get_slash_command())
 		{
@@ -39,6 +39,7 @@ namespace test
 		{
 			message_create->reply("Not implemented, use the slash command instead.");
 		}
+		co_return;
 	}
 }
 
