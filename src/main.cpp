@@ -29,11 +29,11 @@ int main(/*int argc, char const* argv[]*/)
     fixedphilip::utils::program_start = std::chrono::system_clock::now();
 
     // 1. splash screen :3
-    fixedphilip::log::info("====================");
+    fixedphilip::log::info("==============================");
     fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
     fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
     fixedphilip::log::info(std::format("Targets " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", FIXEDPHILIP_BUILD_ARCHITECTURE_NUM));
-    fixedphilip::log::info("====================");
+    fixedphilip::log::info("==============================");
 
     // 2. load config
     struct config_ : public fixedphilip::file::json_pretty_print

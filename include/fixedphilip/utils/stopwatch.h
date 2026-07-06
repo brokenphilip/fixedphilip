@@ -57,9 +57,10 @@ namespace fixedphilip::utils
 		}
 	};
 
-	// Global stopwatch measuring program uptime
+	// How long this program has been running for
 	inline stopwatch program_uptime;
 
 	// Time point when the program started
+	// (must use system_clock for accurate 01-Jan-1970 epoch)
 	inline std::chrono::system_clock::time_point program_start;
 }
