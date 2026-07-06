@@ -13,7 +13,7 @@ namespace fixedphilip
 			inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
 			inline auto get_message_create() const { return std::get_if<dpp::message_create_t>(this); }
 
-			inline auto& get_event_dispatch() const
+			inline auto& event_dispatch() const
 			{
 				return std::visit([](auto& event_dispatch) -> const dpp::event_dispatch_t&
 				{
@@ -121,4 +121,4 @@ namespace fixedphilip
 	};
 }
 
-#define FIXEDPHILIP_COMMAND(name, description, version) static fixedphilip::command name##_(#name, description, version, &name::init, &name::run)
+#define FIXEDPHILIP_COMMAND(name, description, version) static fixedphilip::command fixedphilip_command_##name##_(#name, description, version, &fixedphilip::commands::name::init, &fixedphilip::commands::name::run)

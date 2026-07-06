@@ -65,7 +65,12 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
                     auto iter = fixedphilip::command::first();
                     while (iter)
                     {
-                        try_at(data, iter->name(), command_version_map[iter->name()]);
+                        auto name = iter->name();
+                        if (data.contains(name))
+                        {
+                            // we don't need to log "key not found" exceptions
+                            try_at(data, name, command_version_map[name]);
+                        }
                         iter = iter->next();
                     }
                     return true;
@@ -148,7 +153,7 @@ dpp::task<void> fixedphilip::discord::bot::on_slashcommand(const dpp::slashcomma
     }
 }
 
-void fixedphilip::discord::bot::get_app_info_async()
+void fixedphilip::discord::bot::fetch_app_info_async()
 {    
     cluster_.current_application_get([](const dpp::confirmation_callback_t& result) -> dpp::task<void>
     {

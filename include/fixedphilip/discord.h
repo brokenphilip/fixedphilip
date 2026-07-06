@@ -52,7 +52,7 @@ namespace fixedphilip::discord
 		static event_t<dpp::ready_t> on_ready;
 		static event_t<dpp::slashcommand_t> on_slashcommand;
 
-		void get_app_info_async();
+		void fetch_app_info_async();
 		void register_events();
 	public:
 		inline bot(const config& config) : config_(config), cluster_(config.token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members) { instance_ = this; }
@@ -60,7 +60,7 @@ namespace fixedphilip::discord
 
 		inline bool setup()
 		{
-			get_app_info_async();
+			fetch_app_info_async();
 			register_events();
 			return true;
 		}

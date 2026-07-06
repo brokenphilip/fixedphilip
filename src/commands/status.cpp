@@ -3,7 +3,7 @@
 #include <fixedphilip/build.h>
 #include <fixedphilip/utils/stopwatch.h>
 
-namespace status
+namespace fixedphilip::commands::status
 {
     void init(dpp::slashcommand& command)
     {
@@ -12,7 +12,7 @@ namespace status
 
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
     {
-        auto& event_dispatch = event.get_event_dispatch();
+        auto& event_dispatch = event.event_dispatch();
         auto slash_command = event.get_slash_command();
 
         auto thinking = event.co_thinking_start();
@@ -37,8 +37,6 @@ namespace status
         {
             uptime = std::format("{:%Ss}", program_uptime);
         }
-
-        auto shard = event_dispatch.shard;
 
         auto& cluster = bot.cluster();
 
@@ -119,7 +117,7 @@ namespace status
             .add_field("Users", user_count, true)
             .add_field("Cluster #", std::format("`{}`", cluster.cluster_id), true)
             .add_field("Shards", std::to_string(cluster.numshards), true)
-            .add_field("Shard #", std::format("`{}`", shard), true)
+            .add_field("Shard #", std::format("`{}`", event_dispatch.shard), true)
             .add_field("Uptime", uptime, true)
             .add_field("CPU usage", "???", true)
             .add_field("Total CPU", "???", true)

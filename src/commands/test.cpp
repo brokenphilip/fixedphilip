@@ -1,6 +1,6 @@
 #include <fixedphilip/command.h>
 
-namespace test
+namespace fixedphilip::commands::test
 {
 	void init(dpp::slashcommand& command)
 	{

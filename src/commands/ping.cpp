@@ -1,6 +1,6 @@
 #include <fixedphilip/command.h>
 
-namespace ping
+namespace fixedphilip::commands::ping
 {
     void init(dpp::slashcommand& command)
     {
@@ -14,4 +14,4 @@ namespace ping
     }
 }
 
-FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST ping", "v1");
+FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST latency", "v1");
