@@ -2,6 +2,8 @@
 
 #include <fixedphilip/command.h>
 
+#include <string>
+
 dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_create_t& event)
 {
     if (!instance_)
@@ -35,19 +37,33 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
     {
         if (!instance_)
         {
-            fixedphilip::log::warning("on_ready: bot was null");
+            fixedphilip::log::error("on_ready: bot was null");
             co_return;
         }
         auto& cluster = instance_->cluster();
 
-        auto result = co_await cluster.co_global_commands_get();
-        if (auto slashcommand_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("on_ready, co_global_commands_get", result))
+        instance_->update_presence();
+        cluster.start_timer([](const dpp::timer& timer)
         {
-            // create modifiable copy of the command map
-            dpp::slashcommand_map command_map = *slashcommand_map;
+            if (!instance_)
+            {
+                fixedphilip::log::error("on_ready (start_timer): bot was null");
+                return;
+            }
+
+            instance_->update_presence();
+        }, 
+        60 * instance_->config_.presence_update_rate_mins);
+
+        // first check for and remove any stale commands
+        auto result = co_await cluster.co_global_commands_get();
+        if (auto command_map_const = fixedphilip::discord::get_if<dpp::slashcommand_map>("on_ready, co_global_commands_get", result))
+        {
+            // create modifiable copy of the command map, as we can't edit the original
+            dpp::slashcommand_map command_map = *command_map_const;
 
             // the command cache contains when each command was last modified
-            struct command_cache_ : public fixedphilip::file::json_pretty_print
+            struct command_cache_ : public fixedphilip::utils::file::json_pretty_print
             {
                 std::unordered_map<std::string, std::string> command_version_map;
 
@@ -77,13 +93,12 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
                 }
             } command_cache;
 
-            fixedphilip::file::settings command_cache_settings
+            fixedphilip::utils::file::settings command_cache_settings
             {
                 .filename = "command_cache.json",
                 .create_if_not_found = true,
                 .log = true,
             };
-
             command_cache.load(command_cache_settings);
 
             // check for stale commands
@@ -121,7 +136,7 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
                 co_await cluster.co_global_command_delete(key);
             }
 
-            // update our command cache with the latest data
+            // update our command cache with the latest command (+version) data
             command_cache.save(command_cache_settings);
         }
 
@@ -141,6 +156,12 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
 
 dpp::task<void> fixedphilip::discord::bot::on_slashcommand(const dpp::slashcommand_t& event)
 {
+    if (!instance_)
+    {
+        fixedphilip::log::error("on_slashcommand: bot was null");
+        co_return;
+    }
+
     auto iter = fixedphilip::command::first();
     while (iter)
     {
@@ -153,13 +174,21 @@ dpp::task<void> fixedphilip::discord::bot::on_slashcommand(const dpp::slashcomma
     }
 }
 
+void fixedphilip::discord::bot::update_presence()
+{
+    // todo: tokens
+    std::string presence_string = instance_->config_.presence_activity;
+    cluster_.set_presence(dpp::presence(instance_->config_.presence_status, instance_->config_.activity_type, presence_string));
+}
+
 void fixedphilip::discord::bot::fetch_app_info_async()
 {    
+    // as this function's name implies, the lambda will run asynchronously(!!!) and NOT when this function is called
     cluster_.current_application_get([](const dpp::confirmation_callback_t& result) -> dpp::task<void>
     {
         if (!instance_)
         {
-            fixedphilip::log::warning("get_app_info_async: bot was null");
+            fixedphilip::log::error("get_app_info_async: bot was null");
             co_return;
         }
 
@@ -169,7 +198,7 @@ void fixedphilip::discord::bot::fetch_app_info_async()
 
             auto& app_owner = app->owner;
             instance_->app_owner_ = app_owner;
-            fixedphilip::log::info("Instance owner is: " + app_owner.format_username());
+            fixedphilip::log::info("Instance owner is: " + app_owner.username);
 
             // check for any privileged intents - if we don't have permission to use them, disable them
             uint32_t disabled_intents = 0;
@@ -232,7 +261,7 @@ void fixedphilip::discord::bot::register_events()
 
 bool fixedphilip::discord::bot::config::load_from_file(const std::string& filename)
 {
-    fixedphilip::file::settings config_settings
+    fixedphilip::utils::file::settings config_settings
     {
         .filename = filename,
         .create_if_not_found = true,
@@ -240,16 +269,18 @@ bool fixedphilip::discord::bot::config::load_from_file(const std::string& filena
     };
 
     auto result = load(config_settings);
-    if (result == fixedphilip::file::r_file_not_found)
+    if (result == fixedphilip::utils::file::r_file_not_found)
     {
         fixedphilip::log::warning("Default config saved - make sure to update your bot token");
         return false;
     }
-    else if (result != fixedphilip::file::r_success)
+    else if (result != fixedphilip::utils::file::r_success)
     {
         // logs are already printed for us
         return false;
     }
+
+    save(config_settings);
 
     if (token == FIXEDPHILIP_DEFAULT_TOKEN || token.empty())
     {

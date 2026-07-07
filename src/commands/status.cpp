@@ -110,7 +110,7 @@ namespace fixedphilip::commands::status
             .set_description(std::format("**Built on:** {}\n**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit\n**Instance owner:** `{}`\n**Instance launched:** <t:{}:s>",
                 fixedphilip::build::date_time(),
                 FIXEDPHILIP_BUILD_ARCHITECTURE_NUM,
-                fixedphilip::discord::bot::get_instance()->app_owner().format_username(),
+                fixedphilip::discord::bot::get_instance()->app_owner().username,
                 std::chrono::duration_cast<std::chrono::seconds>(fixedphilip::utils::program_start.time_since_epoch()).count()))
             .add_field("Ping", std::format("{} ms", static_cast<int>(cluster.rest_ping * 1000)), true)
             .add_field("Servers", server_count, true)

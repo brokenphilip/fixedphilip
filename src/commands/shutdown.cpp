@@ -26,6 +26,7 @@ namespace fixedphilip::commands::shutdown
         {
             co_await event.co_reply("Shutting down...");
             fixedphilip::log::info("Shutdown initiated via command");
+            //bot.cluster().set_presence(dpp::presence(dpp::ps_offline, dpp::at_custom, ""));
             bot.cluster().shutdown();
         }
         else

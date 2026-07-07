@@ -2,7 +2,7 @@
 
 #include <fixedphilip/log.h>
 
-namespace fixedphilip::file
+namespace fixedphilip::utils::file
 {
 	struct settings
 	{
@@ -175,7 +175,7 @@ namespace fixedphilip::file
 			}
 			catch (const std::exception& e)
 			{
-				fixedphilip::log::warning(std::format("Exception at '{}' json key: {}", key, e.what()));
+				fixedphilip::log::error(std::format("Exception reading '{}' json key: {}", key, e.what()));
 				return false;
 			}
 		}
