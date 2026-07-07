@@ -1,11 +1,11 @@
 #pragma once
 
-#include <fixedphilip/utils/node.h>
+#include <fixedphilip/utils/named_node.h>
 #include <fixedphilip/discord.h>
 
 namespace fixedphilip
 {
-	class command : public utils::node<command>
+	class command : public utils::named_node<command>
 	{
 	public:
 		struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t>
@@ -90,17 +90,15 @@ namespace fixedphilip
 		using init_function = void(dpp::slashcommand& command);
 		using run_function = dpp::task<void>(const run_event& event, fixedphilip::discord::bot& bot);
 	private:
-		const char* name_;
 		const char* description_;
 		const char* version_;
 
 		init_function* init_;
 		run_function* run_;
 	public:
-		command(const char* name, const char* description, const char* version, init_function* init, run_function* run) : name_(name), description_(description), version_(version), init_(init), run_(run) {}
+		command(const char* name, const char* description, const char* version, init_function* init, run_function* run) : named_node<command>(name), description_(description), version_(version), init_(init), run_(run) {}
 		~command() {}
 
-		inline auto name() { return name_; }
 		inline auto description() { return description_; }
 		inline auto version() { return version_; }
 
@@ -110,14 +108,12 @@ namespace fixedphilip
 			auto bot = fixedphilip::discord::bot::get_instance();
 			if (!bot)
 			{
-				fixedphilip::log::error(std::format("{} command: bot was null", name_));
+				fixedphilip::log::error(std::format("{} command: bot was null", name()));
 				event.reply("An internal error occurred.");
 				co_return;
 			}
 			co_await run_(event, *bot);
 		}
-
-		inline virtual bool compare_nodes(command* current, command* next) override final { return strcmp(current->name_, next->name_) < 0; }
 	};
 }
 

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cstring> // strcmp
+
 namespace fixedphilip::utils
 {
 	template <typename T>
-	class node
+	class named_node
 	{
 	private:
 		static inline T* first_ = nullptr;
@@ -11,15 +13,10 @@ namespace fixedphilip::utils
 
 		T* prev_ = nullptr;
 		T* next_ = nullptr;
-	public:
-		// Sorting function used to compare two nodes and ordering them accordingly.
-		// Return true if "current" should be added before "next", false otherwise.
-		inline virtual bool compare_nodes(T* current, T* next)
-		{
-			return true;
-		}
 
-		inline node()
+		const char* name_;
+	public:
+		inline named_node(const char* name) : name_(name)
 		{
 			// if the linked list is empty, we're the first node
 			if (!first_)
@@ -33,8 +30,8 @@ namespace fixedphilip::utils
 			T* previous_iter = nullptr;
 			while (current_iter)
 			{
-				// does our node alphabetically precede the currently iterated node?
-				if (compare_nodes(static_cast<T*>(this), current_iter))
+				// named nodes are sorted alphabetically
+				if (strcmp(static_cast<T*>(this)->name_, current_iter->name_) < 0)
 				{
 					// squeeze inbetween the two nodes
 					next_ = current_iter;
@@ -65,7 +62,7 @@ namespace fixedphilip::utils
 			last_ = static_cast<T*>(this);
 		}
 
-		inline ~node()
+		inline ~named_node()
 		{
 			if (prev_)
 			{
@@ -93,5 +90,7 @@ namespace fixedphilip::utils
 
 		inline auto previous() { return prev_; }
 		inline auto next() { return next_; }
+
+		inline auto name() { return name_; }
 	};
 }
