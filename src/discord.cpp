@@ -1,8 +1,9 @@
 #include <fixedphilip/discord.h>
 
 #include <fixedphilip/command.h>
+#include <fixedphilip/build.h>
 
-#include <string>
+#include <fixedphilip/utils/string.h>
 
 dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_create_t& event)
 {
@@ -176,8 +177,17 @@ dpp::task<void> fixedphilip::discord::bot::on_slashcommand(const dpp::slashcomma
 
 void fixedphilip::discord::bot::update_presence()
 {
-    // todo: tokens
+    const std::vector<std::pair<std::string, std::string>> token_conversion
+    {
+        { "%prefix%", config_.prefix },
+        { "%version%", std::to_string(FIXEDPHILIP_BUILD_VERSION_NUM) },
+    };
+
     std::string presence_string = instance_->config_.presence_activity;
+    for (int i = 0; i < token_conversion.size(); i++)
+    {
+        fixedphilip::utils::string::replace_all(presence_string, token_conversion[i].first, token_conversion[i].second);
+    }
     cluster_.set_presence(dpp::presence(instance_->config_.presence_status, instance_->config_.activity_type, presence_string));
 }
 
