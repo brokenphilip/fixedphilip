@@ -4,9 +4,9 @@
 
 namespace fixedphilip::commands::shutdown
 {
-    void init(dpp::slashcommand& command)
+    dpp::task<void> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
-
+        co_return;
     }
 
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
@@ -24,14 +24,14 @@ namespace fixedphilip::commands::shutdown
 
         if (author == bot.app_owner())
         {
-            co_await event.co_reply("Shutting down...");
+            co_await event.co_reply(":wave: **| Shutting down...**");
             fixedphilip::log::info("Shutdown initiated via command");
             //bot.cluster().set_presence(dpp::presence(dpp::ps_offline, dpp::at_custom, ""));
             bot.cluster().shutdown();
         }
         else
         {
-            event.reply("Only the instance owner can run this command");
+            event.reply(":no_entry: **| Only the instance owner can run this command!**");
         }
         co_return;
     }

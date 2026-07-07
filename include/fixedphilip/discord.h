@@ -5,7 +5,6 @@
 #include <dpp/dpp.h>
 
 #include <fixedphilip/utils/file.h>
-#include <fixedphilip/utils/string_literal.h>
 #include <fixedphilip/log.h>
 
 #define FIXEDPHILIP_DEFAULT_TOKEN "your_bot_token_here"
@@ -157,7 +156,29 @@ namespace fixedphilip::discord
 		inline auto& app_owner() { return app_owner_; }
 
 		static inline auto get_instance() { return instance_; }
+
+		struct counts
+		{
+			// Amount of servers we're currently in
+			int servers = -1;
+
+			// Amount of users in the servers we're in
+			int users = -1;
+
+			// If true, approximate user counts are used instead of exact/unique
+			bool users_fallback = false;
+
+			// Amount of users that installed our app
+			int user_installs = -1;
+
+			// Total amount of users from servers and app installs
+			// NOTE: if either values are invalid, this is invalid too
+			int total_users = -1;
+		};
+		dpp::task<counts> co_get_counts();
 	};
+
+
 
 	template <typename T>
 	const T* get_if(const std::string& log_prefix, const dpp::confirmation_callback_t& result)

@@ -87,7 +87,7 @@ namespace fixedphilip
 			}
 		};
 
-		using init_function = void(dpp::slashcommand& command);
+		using init_function = dpp::task<void>(dpp::slashcommand& command, fixedphilip::discord::bot& bot);
 		using run_function = dpp::task<void>(const run_event& event, fixedphilip::discord::bot& bot);
 	private:
 		const char* description_;
@@ -95,6 +95,16 @@ namespace fixedphilip
 
 		init_function* init_;
 		run_function* run_;
+
+		inline auto get_bot(const std::string& log_prefix)
+		{
+			auto bot = fixedphilip::discord::bot::get_instance();
+			if (!bot)
+			{
+				fixedphilip::log::error(std::format("{}: bot was null", log_prefix));
+			}
+			return bot;
+		}
 	public:
 		command(const char* name, const char* description, const char* version, init_function* init, run_function* run) : named_node<command>(name), description_(description), version_(version), init_(init), run_(run) {}
 		~command() {}
@@ -102,17 +112,23 @@ namespace fixedphilip
 		inline auto description() { return description_; }
 		inline auto version() { return version_; }
 
-		inline auto init(dpp::slashcommand& command) { init_(command); }
+		inline dpp::task<void> init(dpp::slashcommand& command)
+		{ 
+			if (auto bot = get_bot(std::format("{} command, init", name())))
+			{
+				co_await init_(command, *bot);
+			}
+		}
 		inline dpp::task<void> run(const run_event& event)
 		{
-			auto bot = fixedphilip::discord::bot::get_instance();
-			if (!bot)
+			if (auto bot = get_bot(std::format("{} command, run", name())))
 			{
-				fixedphilip::log::error(std::format("{} command: bot was null", name()));
-				event.reply("An internal error occurred.");
-				co_return;
+				co_await run_(event, *bot);
 			}
-			co_await run_(event, *bot);
+			else
+			{
+				event.reply(":warning: **| An internal error occurred.**");
+			}
 		}
 	};
 }

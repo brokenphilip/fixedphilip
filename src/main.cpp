@@ -1,12 +1,16 @@
 #include <fixedphilip/log.h>
 #include <fixedphilip/build.h>
 #include <fixedphilip/discord.h>
-#include <fixedphilip/utils/stopwatch.h>
+#include <fixedphilip/utils/time.h>
 
 int main()
 {
-    fixedphilip::utils::program_uptime.start();
-    fixedphilip::utils::program_start = std::chrono::system_clock::now();
+#ifdef __linux__
+    setlinebuf(stdout);
+#endif
+
+    fixedphilip::utils::time::program_uptime.start();
+    fixedphilip::utils::time::program_start = std::chrono::system_clock::now();
 
     fixedphilip::log::info("==============================");
     fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
@@ -31,6 +35,6 @@ int main()
     }
 
     fixedphilip::log::info("Cluster shards terminated - shutting down...");
-    fixedphilip::utils::program_uptime.stop();
+    fixedphilip::utils::time::program_uptime.stop();
     return 0;
 }

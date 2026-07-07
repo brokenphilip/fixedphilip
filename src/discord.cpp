@@ -4,6 +4,47 @@
 #include <fixedphilip/build.h>
 
 #include <fixedphilip/utils/string.h>
+#include <fixedphilip/utils/time.h>
+
+bool fixedphilip::discord::bot::config::load_from_file(const std::string& filename)
+{
+    fixedphilip::utils::file::settings config_settings
+    {
+        .filename = filename,
+        .create_if_not_found = true,
+        .log = true,
+    };
+
+    auto result = load(config_settings);
+    if (result == fixedphilip::utils::file::r_file_not_found)
+    {
+        fixedphilip::log::warning("Default config saved - make sure to update your bot token");
+        return false;
+    }
+    else if (result != fixedphilip::utils::file::r_success)
+    {
+        // logs are already printed for us
+        return false;
+    }
+
+    save(config_settings);
+
+    if (token == FIXEDPHILIP_DEFAULT_TOKEN || token.empty())
+    {
+        fixedphilip::log::error("Bot token not set in config file");
+        return false;
+    }
+
+    if (prefix.empty())
+    {
+        fixedphilip::log::info("Old-style commands disabled (prefix is blank)");
+    }
+    else
+    {
+        fixedphilip::log::info(std::format("Global prefix for old-style commands set to '{}'", prefix));
+    }
+    return true;
+}
 
 dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_create_t& event)
 {
@@ -34,22 +75,22 @@ dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_
 
 dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
 {
-    if (dpp::run_once<struct register_bot_commands>())
+    if (dpp::run_once<struct on_ready_init>())
     {
         if (!instance_)
         {
-            fixedphilip::log::error("on_ready: bot was null");
+            fixedphilip::log::error("on_ready_init: bot was null");
             co_return;
         }
         auto& cluster = instance_->cluster();
 
         instance_->update_presence();
-        cluster.start_timer([](const dpp::timer& timer)
+        cluster.start_timer([](const dpp::timer& timer) -> dpp::task<void>
         {
             if (!instance_)
             {
-                fixedphilip::log::error("on_ready (start_timer): bot was null");
-                return;
+                fixedphilip::log::error("update_presence timer: bot was null");
+                co_return;
             }
 
             instance_->update_presence();
@@ -58,7 +99,7 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
 
         // first check for and remove any stale commands
         auto result = co_await cluster.co_global_commands_get();
-        if (auto command_map_const = fixedphilip::discord::get_if<dpp::slashcommand_map>("on_ready, co_global_commands_get", result))
+        if (auto command_map_const = fixedphilip::discord::get_if<dpp::slashcommand_map>("on_ready_init, co_global_commands_get", result))
         {
             // create modifiable copy of the command map, as we can't edit the original
             dpp::slashcommand_map command_map = *command_map_const;
@@ -148,7 +189,7 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
         {
             fixedphilip::log::info(std::format("Registering command '{}'...", iter->name()));
             auto& command = commands.emplace_back(iter->name(), iter->description(), cluster.me.id);
-            iter->init(command);
+            co_await iter->init(command);
             iter = iter->next();
         }
         cluster.global_bulk_command_create(commands);
@@ -269,42 +310,65 @@ void fixedphilip::discord::bot::register_events()
     cluster_.on_ready(on_ready);
 }
 
-bool fixedphilip::discord::bot::config::load_from_file(const std::string& filename)
+dpp::task<fixedphilip::discord::bot::counts> fixedphilip::discord::bot::co_get_counts()
 {
-    fixedphilip::utils::file::settings config_settings
+    counts counts;
+    auto guild_cache = dpp::get_guild_cache();
+    if (guild_cache)
     {
-        .filename = filename,
-        .create_if_not_found = true,
-        .log = true,
-    };
+        std::vector<dpp::snowflake> users;
 
-    auto result = load(config_settings);
-    if (result == fixedphilip::utils::file::r_file_not_found)
-    {
-        fixedphilip::log::warning("Default config saved - make sure to update your bot token");
-        return false;
-    }
-    else if (result != fixedphilip::utils::file::r_success)
-    {
-        // logs are already printed for us
-        return false;
-    }
+        int server_count = 0;
 
-    save(config_settings);
+        // this fallback is used in case we lack the necessary intent for accurate results
+        int fallback_user_count = 0;
 
-    if (token == FIXEDPHILIP_DEFAULT_TOKEN || token.empty())
-    {
-        fixedphilip::log::error("Bot token not set in config file");
-        return false;
-    }
+        // we must lock the mutex while we're using the cache
+        {
+            std::shared_lock _(guild_cache->get_mutex());
+            auto& guilds = guild_cache->get_container();
 
-    if (prefix.empty())
-    {
-        fixedphilip::log::info("Old-style commands disabled (prefix is blank)");
+            for (const auto& [guild_snowflake, guild] : guilds)
+            {
+                if (!guild)
+                {
+                    continue;
+                }
+                for (const auto& [member_snowflake, member] : guild->members)
+                {
+                    users.push_back(member_snowflake);
+                }
+                fallback_user_count += guild->member_count;
+            }
+            server_count = guilds.size();
+        }
+
+        std::sort(users.begin(), users.end());
+        auto last = std::unique(users.begin(), users.end());
+        users.erase(last, users.end());
+
+        // cache these for later use, as we will only call the api once per day
+        static int user_install_count = -1;
+        static bool has_guild_members_intent = true;
+        static fixedphilip::utils::time::stopwatch last_api_call;
+        if (last_api_call.elapsed<std::chrono::minutes>() > 1440 || !last_api_call.running())
+        {
+            auto result = co_await cluster_.co_current_application_get();
+            if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))
+            {
+                user_install_count = app->approximate_user_install_count;
+                has_guild_members_intent = (app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
+
+                last_api_call.reset();
+                last_api_call.start();
+            }
+        }
+
+        counts.servers = server_count;
+        counts.users = has_guild_members_intent ? users.size() : fallback_user_count;
+        counts.users_fallback = !has_guild_members_intent;
+        counts.user_installs = user_install_count;
+        counts.total_users = user_install_count >= 0 ? counts.users + user_install_count : -1;
     }
-    else
-    {
-        fixedphilip::log::info(std::format("Global prefix for old-style commands set to '{}'", prefix));
-    }
-    return true;
+    co_return counts;
 }
