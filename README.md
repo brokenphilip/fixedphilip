@@ -12,11 +12,7 @@ fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D+
 > - Feature requests will likely not be considered for the forseeable future.
 
 ## Running
-Upon your first launch, it will create a `config.json` with the following contents, and then exit:
-```json
-{ "token": "your_bot_token_here" }
-```
-You must edit this file in a text editor by providing your own [bot token](https://dpp.dev/creating-a-bot-application.html). After the required modifications have been made, you can run fixedphilip as normal.
+Upon your first launch, it will create a default `config.json`. You must edit this file in a text editor and provide your own [bot token](https://dpp.dev/creating-a-bot-application.html). After the required modifications have been made, you can run fixedphilip as normal.
 
 ### ...on Windows
 Ensure the filesystem structure matches the following:
@@ -46,7 +42,7 @@ sudo dpkg -i dpp.deb
 
 ## Building
 ### ...to Windows using Visual Studio
-To build fixedphilip for Windows, a reasonably modern version of VS must be installed.
+To build fixedphilip for Windows, OpenSSL and a reasonably modern version of VS must be installed.
 
 Using the Visual Studio installer, modify your VS installation and select the following workload:
 - Desktop development with C++
