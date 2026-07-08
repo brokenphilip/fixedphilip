@@ -23,7 +23,8 @@ namespace fixedphilip::commands::test
 				co_return;
 			}
 
-			std::chrono::year_month_day ymd(std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now()));
+			// can't believe it's this fucking difficult to get the CURRENT TIME that i have to hardcode this stupid fucking offset
+			std::chrono::year_month_day ymd(std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now() + std::chrono::hours(2)));
 			
 			uint32_t day = static_cast<uint32_t>(ymd.day());
 			static uint32_t old_day = 69;
