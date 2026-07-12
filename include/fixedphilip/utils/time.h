@@ -34,7 +34,7 @@ namespace fixedphilip::utils::time
 		}
 
 		// Gets whether the Stopwatch is currently measuring elapsed time or not.
-		inline bool running()
+		inline bool running() const
 		{
 			return start_.time_since_epoch().count() != 0 && end_.time_since_epoch().count() == 0;
 		}
@@ -48,7 +48,7 @@ namespace fixedphilip::utils::time
 
 		// Gets the elapsed time (in microseconds by default - 1000us = 1ms).
 		template <typename Duration = std::chrono::microseconds>
-		inline auto elapsed()
+		inline auto elapsed() const
 		{
 			if (running())
 			{
@@ -58,12 +58,23 @@ namespace fixedphilip::utils::time
 		}
 	};
 
+	class raii_stopwatch : public stopwatch
+	{
+		using stopwatch::start;
+		using stopwatch::stop;
+		using stopwatch::reset;
+	public:
+		inline raii_stopwatch() { start(); }
+		inline ~raii_stopwatch() { stop(); }
+		inline bool running() { return true; }
+		using stopwatch::elapsed;
+	};
+
 	// How long this program has been running for
-	inline stopwatch program_uptime;
+	const inline raii_stopwatch program_uptime;
 
 	// Time point when the program started
-	// (must use system_clock for accurate 01-Jan-1970 epoch)
-	inline std::chrono::system_clock::time_point program_start;
+	const inline auto program_start = std::chrono::system_clock::now();
 
 	inline std::string format_uptime()
 	{

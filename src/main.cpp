@@ -8,10 +8,6 @@ int main()
 #ifdef __linux__
     setlinebuf(stdout);
 #endif
-
-    fixedphilip::utils::time::program_uptime.start();
-    fixedphilip::utils::time::program_start = std::chrono::system_clock::now();
-
     fixedphilip::log::info("==============================");
     fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
     fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
@@ -35,6 +31,5 @@ int main()
     }
 
     fixedphilip::log::info("Cluster shards terminated - shutting down...");
-    fixedphilip::utils::time::program_uptime.stop();
     return 0;
 }
