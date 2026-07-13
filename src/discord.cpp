@@ -351,7 +351,7 @@ dpp::task<fixedphilip::discord::bot::counts> fixedphilip::discord::bot::co_get_c
         static int user_install_count = -1;
         static bool has_guild_members_intent = true;
         static fixedphilip::utils::time::stopwatch last_api_call;
-        if (last_api_call.elapsed<std::chrono::minutes>() > 1440 || !last_api_call.running())
+        if (last_api_call.elapsed<std::chrono::minutes>().count() > 1440 || !last_api_call.running())
         {
             auto result = co_await cluster_.co_current_application_get();
             if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))

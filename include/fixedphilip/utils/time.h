@@ -48,13 +48,13 @@ namespace fixedphilip::utils::time
 
 		// Gets the elapsed time (in microseconds by default - 1000us = 1ms).
 		template <typename Duration = std::chrono::microseconds>
-		inline auto elapsed() const
+		inline Duration elapsed() const
 		{
 			if (running())
 			{
-				return std::chrono::duration_cast<Duration>(clock::now() - start_).count();
+				return std::chrono::duration_cast<Duration>(clock::now() - start_);
 			}
-			return std::chrono::duration_cast<Duration>(end_ - start_).count();
+			return std::chrono::duration_cast<Duration>(end_ - start_);
 		}
 	};
 
@@ -79,7 +79,7 @@ namespace fixedphilip::utils::time
 	inline std::string format_uptime()
 	{
 		std::string uptime;
-		auto program_uptime_elapsed = std::chrono::seconds(program_uptime.elapsed<std::chrono::seconds>());
+		auto program_uptime_elapsed = program_uptime.elapsed<std::chrono::seconds>();
 		if (program_uptime_elapsed > std::chrono::days(1))
 		{
 			auto days = std::chrono::duration_cast<std::chrono::days>(program_uptime_elapsed);
