@@ -162,10 +162,10 @@ namespace fixedphilip::discord
 			// Amount of servers we're currently in
 			int servers = -1;
 
-			// Amount of users in the servers we're in
+			// Amount of unique, non-bot users in the servers we're in
 			int users = -1;
 
-			// If true, approximate user counts are used instead of exact/unique
+			// If true, approximate user counts are used instead of exact (unique, non-bot)
 			bool users_fallback = false;
 
 			// Amount of users that installed our app
@@ -178,24 +178,22 @@ namespace fixedphilip::discord
 		dpp::task<counts> co_get_counts();
 	};
 
-
-
 	template <typename T>
 	const T* get_if(const std::string& log_prefix, const dpp::confirmation_callback_t& result)
 	{
+		if (result.is_error())
+		{
+			fixedphilip::log::error(std::format("{}: {}", log_prefix, result.get_error().human_readable));
+			return;
+		}
+
 		if (auto value = std::get_if<T>(&result.value))
 		{
 			return value;
 		}
 
-		if (result.is_error())
-		{
-			fixedphilip::log::error(std::format("{}: {}", log_prefix, result.get_error().human_readable));
-		}
-		else
-		{
-			fixedphilip::log::error(std::format("{}: unknown error (wrong result.value type)", log_prefix));
-		}
+		// TODO: is this unreachable?
+		fixedphilip::log::error(std::format("{}: unknown error (wrong result.value type)", log_prefix));
 		return nullptr;
 	}
 }

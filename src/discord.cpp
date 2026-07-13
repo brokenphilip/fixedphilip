@@ -54,6 +54,12 @@ dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_
         co_return;
     }
 
+    // we don't want bots to run our commands
+    if (event.msg.author.is_bot())
+    {
+        co_return;
+    }
+
     auto& prefix = instance_->config_.prefix;
     if (!prefix.empty())
     {
@@ -336,6 +342,15 @@ dpp::task<fixedphilip::discord::bot::counts> fixedphilip::discord::bot::co_get_c
                 }
                 for (const auto& [member_snowflake, member] : guild->members)
                 {
+                    auto user = member.get_user();
+                    if (!user)
+                    {
+                        continue;
+                    }
+                    if (user->is_bot())
+                    {
+                        continue;
+                    }
                     users.push_back(member_snowflake);
                 }
                 fallback_user_count += guild->member_count;

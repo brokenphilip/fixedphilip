@@ -36,7 +36,7 @@ namespace fixedphilip::commands::status
             }
             else
             {
-                user_count = std::format("{} (unique)", counts.users);
+                user_count = std::format("{} (unique, non-bot)", counts.users);
             }
         }
 
@@ -60,10 +60,10 @@ namespace fixedphilip::commands::status
             .add_field("Uptime (Ping)", std::format("{} (`{} ms`)", uptime, static_cast<int>(cluster.rest_ping * 1000)))
             .add_field("User count", 
                 std::format(
-                    "\\- {} in {} server{}\n"
+                    "\\- {} user{} in {} server{}\n"
                     "\\- {} user install{}\n"
                     "\\- {} total",
-                    user_count, server_count, counts.servers == 1 ? "" : "s",
+                    user_count, counts.users == 1 ? "" : "s", server_count, counts.servers == 1 ? "" : "s",
                     user_install_count, counts.user_installs == 1 ? "" : "s",
                     total_user_count))
             .add_field("Shard #", std::format("`{}` (out of {})", event_dispatch.shard, cluster.numshards))
