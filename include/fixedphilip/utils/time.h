@@ -66,8 +66,7 @@ namespace fixedphilip::utils::time
 	public:
 		inline raii_stopwatch() { start(); }
 		inline ~raii_stopwatch() { stop(); }
-		inline bool running() { return true; }
-		using stopwatch::elapsed;
+		inline bool running() const { return true; }
 	};
 
 	// How long this program has been running for

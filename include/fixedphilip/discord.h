@@ -184,7 +184,7 @@ namespace fixedphilip::discord
 		if (result.is_error())
 		{
 			fixedphilip::log::error(std::format("{}: {}", log_prefix, result.get_error().human_readable));
-			return;
+			return nullptr;
 		}
 
 		if (auto value = std::get_if<T>(&result.value))
