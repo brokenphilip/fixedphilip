@@ -241,15 +241,16 @@ void fixedphilip::discord::bot::update_presence()
 void fixedphilip::discord::bot::fetch_app_info_async()
 {    
     // as this function's name implies, the lambda will run asynchronously(!!!) and NOT when this function is called
+    // it CAN'T be run synchronously - if we block the thread, the REST API request queue NEVER gets serviced !!!
     cluster_.current_application_get([](const dpp::confirmation_callback_t& result) -> dpp::task<void>
     {
         if (!instance_)
         {
-            fixedphilip::log::error("get_app_info_async: bot was null");
+            fixedphilip::log::error("fetch_app_info_async: bot was null");
             co_return;
         }
 
-        if (auto app = fixedphilip::discord::get_if<dpp::application>("get_app_info_async, current_application_get", result))
+        if (auto app = fixedphilip::discord::get_if<dpp::application>("fetch_app_info_async, current_application_get", result))
         {
             auto& cluster = instance_->cluster_;
 
