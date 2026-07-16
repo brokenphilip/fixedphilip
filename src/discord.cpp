@@ -365,18 +365,22 @@ dpp::task<fixedphilip::discord::bot::counts> fixedphilip::discord::bot::co_get_c
 
         // cache these for later use, as we will only call the api once per day
         static int user_install_count = -1;
-        static bool has_guild_members_intent = true;
-        static fixedphilip::utils::time::stopwatch last_api_call;
-        if (last_api_call.elapsed<std::chrono::minutes>().count() > 1440 || !last_api_call.running())
+        static bool has_guild_members_intent = false;
+        static auto next_call = std::chrono::minutes(1);
+        if (fixedphilip::utils::time::run_if_passed<struct fetch_app_data>(next_call))
         {
             auto result = co_await cluster_.co_current_application_get();
             if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))
             {
+                next_call = std::chrono::minutes(1440);
+
                 user_install_count = app->approximate_user_install_count;
                 has_guild_members_intent = (app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
-
-                last_api_call.reset();
-                last_api_call.start();
+            }
+            else
+            {
+                // cached values are good enough, but try to update them again a bit later
+                next_call = std::chrono::minutes(1);
             }
         }
 

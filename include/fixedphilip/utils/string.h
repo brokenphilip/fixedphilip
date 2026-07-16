@@ -18,7 +18,7 @@ namespace fixedphilip::utils::string
         }
     };
 
-    void replace_all(std::string& str, const std::string& from, const std::string& to)
+    inline void replace_all(std::string& str, const std::string& from, const std::string& to)
     {
         if (from.empty())
         {
@@ -31,5 +31,11 @@ namespace fixedphilip::utils::string
             str.replace(start_pos, from.length(), to);
             start_pos += to.length();
         }
+    }
+
+    inline void to_lowercase_inplace(std::string& source)
+    {
+        auto to_lowercase_fn = [](unsigned char c) { return std::tolower(c); };
+        std::ranges::transform(source, source.begin(), to_lowercase_fn);
     }
 }
