@@ -46,56 +46,7 @@ namespace fixedphilip::discord
 			int presence_update_rate_mins = 5;
 
 			virtual nlohmann::json struct_to_json() override final;
-			inline virtual bool json_to_struct(const nlohmann::json& data) override final
-			{
-				try_at(data, "token", token);
-				try_at(data, "prefix", prefix);
-
-				std::string presence_status_string;
-				if (try_at(data, "presence_status", presence_status_string))
-				{
-					auto it = std::find_if(status_to_string.begin(), status_to_string.end(), [&presence_status_string](const auto& pair)
-					{
-						return pair.second == presence_status_string;
-					});
-					if (it == status_to_string.end())
-					{
-						fixedphilip::log::error("invalid 'presence_status' (reverting to default) - must be either one of: offline, online, dnd, idle, invisible");
-					}
-					else
-					{
-						presence_status = it->first;
-					}
-				}
-
-				std::string presence_activity_string;
-				if (try_at(data, "presence_activity", presence_activity_string))
-				{
-					auto it = std::find_if(activity_to_string.begin(), activity_to_string.end(), [&presence_activity_string](const auto& pair)
-					{
-						return presence_activity_string.starts_with(pair.second);
-					});
-					if (it == activity_to_string.end())
-					{
-						activity_type = dpp::at_custom;
-						presence_activity = presence_activity_string;
-					}
-					else
-					{
-						activity_type = it->first;
-						presence_activity = presence_activity_string.substr(it->second.length());
-					}
-				}
-
-				if (try_at(data, "presence_update_rate_mins", presence_update_rate_mins) && presence_update_rate_mins < 1)
-				{
-					fixedphilip::log::error("'presence_update_rate_mins' is out of bounds - reverting to default");
-					presence_update_rate_mins = 5;
-				}
-
-				// partial load is fine
-				return true;
-			}
+			virtual bool json_to_struct(const nlohmann::json& data) override final;
 
 			bool load_from_file(const std::string& filename);
 		};
