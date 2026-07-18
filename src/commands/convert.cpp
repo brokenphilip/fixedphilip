@@ -158,6 +158,12 @@ namespace fixedphilip::commands::convert
 
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
     {
+        if (auto message_create = event.get_message_create())
+        {
+            event.reply_not_impl_use_other();
+            co_return;
+        }
+
         auto thinking = event.co_thinking_start();
 
         static auto next_call = std::chrono::minutes(1);
@@ -354,10 +360,6 @@ namespace fixedphilip::commands::convert
                 decimals = new_decimals;
             }
             response = convert(value, from, to, decimals);
-        }
-        else if (auto message_create = event.get_message_create())
-        {
-            response = "Not implemented, use /convert instead.";
         }
 
         co_await thinking;

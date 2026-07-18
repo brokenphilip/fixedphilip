@@ -85,6 +85,43 @@ namespace fixedphilip
 					message_create->reply(msg, false, callback);
 				}
 			}
+
+			inline void reply_not_impl_use_other() const
+			{
+				auto bot = fixedphilip::discord::bot::get_instance();
+				if (!bot)
+				{
+					fixedphilip::log::error("reply_not_impl_use_other: bot was null");
+					reply(":warning: **| An internal error occurred.**");
+					return;
+				}
+
+				std::string command_text;
+				if (auto slash_command = get_slash_command())
+				{
+					auto& prefix = bot->prefix();
+					if (prefix.empty())
+					{
+						reply(":warning: **| Not implemented.");
+						return;
+					}
+					command_text = "`" + prefix + slash_command->command.get_command_name() + "`";
+				}
+				else if (auto message_create = get_message_create())
+				{
+					auto name = message_create->msg.content.substr(bot->prefix().length());
+					auto snowflake = bot->slash_command_snowflake(name);
+					if (snowflake == dpp::snowflake(0))
+					{
+						command_text = "`/" + name + "`";
+					}
+					else
+					{
+						command_text = "</" + name + ":" + std::to_string(snowflake) + ">";
+					}
+				}
+				reply(std::format(":warning: **| Not implemented, use {} instead.**", command_text));
+			}
 		};
 
 		using init_function = dpp::task<bool>(dpp::slashcommand& command, fixedphilip::discord::bot& bot);

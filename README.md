@@ -19,8 +19,8 @@ Some of fixedphilip's most notable features include:
 
 > [!IMPORTANT]
 > Currently, the bot is designed for **personal use only**:
-> - I will not be providing a guild/user invite link for my own hosted instance, and
-> - Feature requests will likely not be considered for the forseeable future.
+> - I will not be providing a guild/user invite link for my own hosted instance to the general public, and
+> - Feature requests will likely not be considered, unless I personally have a use for them.
 
 ## Setup
 ### ...on Windows
@@ -113,7 +113,7 @@ sudo apt upgrade
 # install ARM64 specific development libraries (for building to ARM64)
 sudo apt install openssh-client wget rsync build-essential gcc-aarch64-linux-gnu \
                  g++-aarch64-linux-gnu cmake ninja-build libopus-dev:arm64 \
-				 libssl-dev:arm64 zlib1g-dev:arm64
+                 libssl-dev:arm64 zlib1g-dev:arm64
 
 # install ARM64 dpp library in the current directory if you're not building your own
 wget -O dpp.deb https://dl.dpp.dev/latest/linux-rpi-arm64
@@ -137,16 +137,20 @@ Adding new features to fixedphilip is done by creating commands. Each command's 
 namespace fixedphilip::commands::example
 {
     // This callback is run when the command is being created/initialized, right before it gets registered
-	// Return true if initialization was successful and register the command, false otherwise
+    // Return true if initialization was successful and register the command, false otherwise
     dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
+        // You may modify the slash command reference here (to add options to it, or set its flags)
         co_return true;
     }
 
     // This callback is run when the command is being executed, either via slash-command or by old-style (chat prefix) command
+    // Use the "bot" reference to access the dpp::cluster responsible for the command, and other bot-specific info
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
     {
-        event.reply(std::format(":ping_pong: **| Pong!** ({} ms)", static_cast<int>(bot.cluster().rest_ping * 1000)));
+        // "event" is a variant which may contain a dpp::message_create_t or a dpp::slashcommand_t
+        // ...but it also contains helper variant-agnostic functions such as "reply(...)"
+        event.reply("Hello from example command! :3");
         co_return;
     }
 }

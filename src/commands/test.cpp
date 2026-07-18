@@ -76,7 +76,7 @@ namespace fixedphilip::commands::test
 		}
 		else if (auto message_create = event.get_message_create())
 		{
-			message_create->reply("Not implemented, use the slash command instead.");
+			event.reply_not_impl_use_other();
 		}
 		co_return;
 	}

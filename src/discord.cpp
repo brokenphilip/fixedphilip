@@ -88,6 +88,7 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
             fixedphilip::log::error("on_ready_init: bot was null");
             co_return;
         }
+        fixedphilip::log::info("Connected and logged in as: " + instance_->cluster().me.format_username());
         co_await instance_->init_commands();
         co_await instance_->init_presence();
     }
@@ -115,10 +116,13 @@ dpp::task<void> fixedphilip::discord::bot::on_slashcommand(const dpp::slashcomma
 
 dpp::task<void> fixedphilip::discord::bot::init_commands()
 {
+    int total_commands = 0;
+
     std::vector<dpp::slashcommand> commands;
     auto iter = fixedphilip::command::first();
     while (iter)
     {
+        total_commands++;
         auto name = iter->name();
         dpp::slashcommand command(name, iter->description(), cluster_.me.id);
 
@@ -142,11 +146,12 @@ dpp::task<void> fixedphilip::discord::bot::init_commands()
     auto result = co_await cluster_.co_global_bulk_command_create(commands);
     if (auto command_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("init_commands, co_global_bulk_command_create", result))
     {
-        auto result_log = std::format("Registered {} command{}", command_map->size(), command_map->size() == 1 ? "" : "s");
+        auto result_log = std::format("Registered {} (out of {}) command{}", command_map->size(), total_commands, command_map->size() == 1 ? "" : "s");
 
         bool first_command = true;
         for (const auto& [snowflake, command] : *command_map)
         {
+            slash_command_snowflakes_[command.name] = snowflake;
             if (first_command)
             {
                 result_log += ": '" + command.name + "'";

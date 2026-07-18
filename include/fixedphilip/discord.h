@@ -129,6 +129,7 @@ namespace fixedphilip::discord
 		config config_;
 		dpp::cluster cluster_;
 		dpp::user app_owner_;
+		std::unordered_map<std::string, dpp::snowflake> slash_command_snowflakes_;
 
 		template <typename T>
 		using event_t = dpp::task<void>(const T& event);
@@ -154,8 +155,10 @@ namespace fixedphilip::discord
 		}
 		inline void run_blocking() { cluster_.start(); }
 
+		inline const auto& prefix() { return config_.prefix; }
 		inline auto& cluster() { return cluster_; }
 		inline auto& app_owner() { return app_owner_; }
+		inline auto slash_command_snowflake(const std::string& slash_command) { return slash_command_snowflakes_[slash_command]; }
 
 		static inline auto get_instance() { return instance_; }
 
