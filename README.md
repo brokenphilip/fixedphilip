@@ -54,13 +54,14 @@ Aside from the `token`, the `config.json` also contains the following keys (remo
 - `prefix` - the default/global chat prefix for old-style commands
   - If you wish to disable old-style commands, set the prefix to a blank string ("")
 - `presence_activity` - the activity text shown in the bot's presence (member list and profile)
+  - If you wish to disable the bot's presence altogether, set this to a blank string ("")
   - Accepts prefixes "Playing ...", "Streaming ...", "Listening to ...", "Watching ..." and "Competing in ..."
   - Also accepts tokens, which automatically get replaced when presence gets updated:
     - The `%prefix%` token is replaced with the default/global chat prefix for old-style commands
     - The `%version%` token is replaced with the currently running fixedphilip version
 - `presence_status` - the status icon/color shown in the bot's presence (member list and profile)
   - Accepts "offline", "online", "dnd", "idle" and "invisible"
-- `presence_update_rate_mins` - how often the bot's presence should update
+- `presence_update_rate_mins` - how often the bot's presence should update (0 means the status only gets set once on startup)
 
 ## Building
 To get started, clone the repository while recursing submodules, but ignore `src/commands/private`, as this submodule/folder is reserved for my own private closed-source commands.

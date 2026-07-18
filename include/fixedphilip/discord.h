@@ -4,7 +4,7 @@
 
 #include <dpp/dpp.h>
 
-#include <fixedphilip/utils/file.h>
+#include <fixedphilip/file.h>
 #include <fixedphilip/log.h>
 
 #define FIXEDPHILIP_DEFAULT_TOKEN "your_bot_token_here"
@@ -14,7 +14,7 @@ namespace fixedphilip::discord
 	class bot
 	{
 	public:
-		class config : public fixedphilip::utils::file::json_pretty_print
+		class config : public fixedphilip::file::json_pretty_print
 		{
 			// just online/idle is functional?
 			const std::unordered_map<dpp::presence_status, std::string> status_to_string
@@ -45,31 +45,7 @@ namespace fixedphilip::discord
 
 			int presence_update_rate_mins = 5;
 
-			inline virtual nlohmann::json struct_to_json() override final
-			{
-				if (activity_type == dpp::at_custom)
-				{
-					return
-					{
-						{ "token", token },
-						{ "prefix", prefix },
-						{ "presence_status", status_to_string.at(presence_status) },
-						{ "presence_activity", presence_activity },
-						{ "presence_update_rate_mins", presence_update_rate_mins },
-					};
-				}
-				else
-				{
-					return
-					{
-						{ "token", token },
-						{ "prefix", prefix },
-						{ "presence_status", status_to_string.at(presence_status) },
-						{ "presence_activity", activity_to_string.at(activity_type) + presence_activity },
-						{ "presence_update_rate_mins", presence_update_rate_mins },
-					};
-				}
-			}
+			virtual nlohmann::json struct_to_json() override final;
 			inline virtual bool json_to_struct(const nlohmann::json& data) override final
 			{
 				try_at(data, "token", token);
