@@ -1,3 +1,6 @@
 [submodule "DPP"]
 	path = DPP
 	url = https://github.com/brainboxdotcc/DPP
+[submodule "src/commands/private"]
+	path = src/commands/private
+	url = https://github.com/brokenphilip/fixedphilip_private_commands
