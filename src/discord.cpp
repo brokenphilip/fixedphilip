@@ -72,7 +72,7 @@ dpp::task<void> fixedphilip::discord::bot::on_message_create(const dpp::message_
             if (event.msg.content == command || event.msg.content.starts_with(command + " "))
             {
                 co_await iter->run(fixedphilip::command::run_event(event));
-                break;
+                co_return;
             }
             iter = iter->next();
         }
@@ -88,117 +88,8 @@ dpp::task<void> fixedphilip::discord::bot::on_ready(const dpp::ready_t& event)
             fixedphilip::log::error("on_ready_init: bot was null");
             co_return;
         }
-        auto& cluster = instance_->cluster();
-
-        instance_->update_presence();
-        cluster.start_timer([](const dpp::timer& timer) -> dpp::task<void>
-        {
-            if (!instance_)
-            {
-                fixedphilip::log::error("update_presence timer: bot was null");
-                co_return;
-            }
-
-            instance_->update_presence();
-        }, 
-        60 * instance_->config_.presence_update_rate_mins);
-
-        // first check for and remove any stale commands
-        auto result = co_await cluster.co_global_commands_get();
-        if (auto command_map_const = fixedphilip::discord::get_if<dpp::slashcommand_map>("on_ready_init, co_global_commands_get", result))
-        {
-            // create modifiable copy of the command map, as we can't edit the original
-            dpp::slashcommand_map command_map = *command_map_const;
-
-            // the command cache contains when each command was last modified
-            struct command_cache_ : public fixedphilip::utils::file::json_pretty_print
-            {
-                std::unordered_map<std::string, std::string> command_version_map;
-
-                virtual nlohmann::json struct_to_json() override final
-                {
-                    nlohmann::json data;
-                    for (const auto& [command, version] : command_version_map)
-                    {
-                        data[command] = version;
-                    }
-                    return data;
-                }
-                virtual bool json_to_struct(const nlohmann::json& data) override final
-                {
-                    auto iter = fixedphilip::command::first();
-                    while (iter)
-                    {
-                        auto name = iter->name();
-                        if (data.contains(name))
-                        {
-                            // we don't need to log "key not found" exceptions
-                            try_at(data, name, command_version_map[name]);
-                        }
-                        iter = iter->next();
-                    }
-                    return true;
-                }
-            } command_cache;
-
-            fixedphilip::utils::file::settings command_cache_settings
-            {
-                .filename = "command_cache.json",
-                .create_if_not_found = true,
-                .log = true,
-            };
-            command_cache.load(command_cache_settings);
-
-            // check for stale commands
-            auto iter = fixedphilip::command::first();
-            while (iter)
-            {
-                auto name = iter->name();
-                auto version = iter->version();
-                std::erase_if(command_map, [name, version, &command_cache](const auto& item)
-                {
-                    auto command_name_match = !strncmp(name, item.second.name.c_str(), strlen(name));
-                    if (command_name_match)
-                    {
-                        // fetch the command version before we modify it
-                        auto version_match = !strncmp(command_cache.command_version_map[name].c_str(), version, strlen(version));
-
-                        if (!version_match)
-                        {
-                            fixedphilip::log::info(std::format("Command '{}' version changed: {} -> {}", name, command_cache.command_version_map[name], version));
-                            command_cache.command_version_map[name] = version;
-                        }
-
-                        // if both the command name and version match, the command is NOT stale - delete it from the map
-                        return version_match;
-                    }
-                    return false;
-                });
-                iter = iter->next();
-            }
-
-            // delete stale commands
-            for (const auto& [key, value] : command_map)
-            {
-                fixedphilip::log::info(std::format("Deleting stale command '{}'...", value.name));
-                co_await cluster.co_global_command_delete(key);
-            }
-
-            // update our command cache with the latest command (+version) data
-            command_cache.save(command_cache_settings);
-        }
-
-        // finally, register our commands
-        std::vector<dpp::slashcommand> commands;
-        auto iter = fixedphilip::command::first();
-        while (iter)
-        {
-            fixedphilip::log::info(std::format("Registering command '{}'...", iter->name()));
-            auto& command = commands.emplace_back(iter->name(), iter->description(), cluster.me.id);
-            co_await iter->init(command);
-            iter = iter->next();
-        }
-        cluster.global_bulk_command_create(commands);
+        co_await instance_->init_commands();
+        co_await instance_->init_presence();
     }
 }
 
@@ -216,10 +107,77 @@ dpp::task<void> fixedphilip::discord::bot::on_slashcommand(const dpp::slashcomma
         if (event.command.get_command_name() == iter->name())
         {
             co_await iter->run(fixedphilip::command::run_event(event));
-            break;
+            co_return;
         }
         iter = iter->next();
     }
+}
+
+dpp::task<void> fixedphilip::discord::bot::init_commands()
+{
+    std::vector<dpp::slashcommand> commands;
+    auto iter = fixedphilip::command::first();
+    while (iter)
+    {
+        auto name = iter->name();
+        dpp::slashcommand command(name, iter->description(), cluster_.me.id);
+
+        // we want to guarantee that commands are initialized in-order, so we co_await their init
+        // not to mention "command" can be a dangling reference if commands goes out-of-scope and gets destroyed
+        auto success = co_await iter->init(command);
+        if (success)
+        {
+            commands.push_back(std::move(command));
+        }
+
+        // also add or update their version to the map
+        //command_cache.command_version_map[name] = iter->version();
+
+        iter = iter->next();
+    }
+
+    // update our command cache with the latest command (+version) data
+    //command_cache.save(command_cache_settings);
+
+    auto result = co_await cluster_.co_global_bulk_command_create(commands);
+    if (auto command_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("init_commands, co_global_bulk_command_create", result))
+    {
+        auto result_log = std::format("Registered {} command{}", command_map->size(), command_map->size() == 1 ? "" : "s");
+
+        bool first_command = true;
+        for (const auto& [snowflake, command] : *command_map)
+        {
+            if (first_command)
+            {
+                result_log += ": '" + command.name + "'";
+            }
+            else
+            {
+                result_log += ", '" + command.name + "'";
+            }
+            first_command = false;
+        }
+
+        fixedphilip::log::info(result_log);
+    }
+}
+
+dpp::task<void> fixedphilip::discord::bot::init_presence()
+{
+    update_presence();
+    cluster_.start_timer([](const dpp::timer& timer) -> dpp::task<void>
+    {
+        if (!instance_)
+        {
+            fixedphilip::log::error("update_presence timer: bot was null");
+            co_return;
+        }
+
+        instance_->update_presence();
+    },
+    60 * instance_->config_.presence_update_rate_mins);
+
+    co_return;
 }
 
 void fixedphilip::discord::bot::update_presence()
@@ -313,6 +271,7 @@ void fixedphilip::discord::bot::fetch_app_info_async()
 void fixedphilip::discord::bot::register_events()
 {
     cluster_.on_log(dpp::utility::cout_logger());
+    // on_message_create is registered by fetch_app_info_async
     cluster_.on_slashcommand(on_slashcommand);
     cluster_.on_ready(on_ready);
 }
@@ -363,7 +322,7 @@ dpp::task<fixedphilip::discord::bot::counts> fixedphilip::discord::bot::co_get_c
         auto last = std::unique(users.begin(), users.end());
         users.erase(last, users.end());
 
-        // cache these for later use, as we will only call the api once per day
+        // cache these for later use, as we will only call the api once per interval
         static int user_install_count = -1;
         static bool has_guild_members_intent = false;
         static auto next_call = std::chrono::minutes(1);
@@ -372,7 +331,8 @@ dpp::task<fixedphilip::discord::bot::counts> fixedphilip::discord::bot::co_get_c
             auto result = co_await cluster_.co_current_application_get();
             if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))
             {
-                next_call = std::chrono::minutes(1440);
+                // these update daily, so one hour is generous enough
+                next_call = std::chrono::minutes(60);
 
                 user_install_count = app->approximate_user_install_count;
                 has_guild_members_intent = (app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));

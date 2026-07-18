@@ -145,7 +145,7 @@ namespace fixedphilip::commands::convert
         return std::format(":x: **| Error:** no suitable conversion found for `{}` -> `{}`", from, to);
     }
 
-    dpp::task<void> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
+    dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
         command
             .add_option(dpp::command_option(dpp::co_number, "value", "Number to convert the units of", true))
@@ -153,7 +153,7 @@ namespace fixedphilip::commands::convert
             .add_option(dpp::command_option(dpp::co_string, "to", "Unit of the number to convert to", true))
             .add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to display the result (2 by default)"));
 
-        co_return;
+        co_return true;
     }
 
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
@@ -365,4 +365,4 @@ namespace fixedphilip::commands::convert
     }
 }
 
-FIXEDPHILIP_COMMAND(convert, "Convert between two units", "v1");
+FIXEDPHILIP_COMMAND(convert, "Convert between two units");

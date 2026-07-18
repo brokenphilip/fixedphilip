@@ -136,6 +136,8 @@ namespace fixedphilip::discord
 		static event_t<dpp::ready_t> on_ready;
 		static event_t<dpp::slashcommand_t> on_slashcommand;
 
+		dpp::task<void> init_commands();
+		dpp::task<void> init_presence();
 		void update_presence();
 
 		void fetch_app_info_async();

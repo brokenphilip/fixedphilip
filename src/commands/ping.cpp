@@ -2,9 +2,9 @@
 
 namespace fixedphilip::commands::ping
 {
-    dpp::task<void> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
+    dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
-        co_return;
+        co_return true;
     }
 
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
@@ -14,4 +14,4 @@ namespace fixedphilip::commands::ping
     }
 }
 
-FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST latency", "v1");
+FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST latency");

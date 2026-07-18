@@ -18,7 +18,7 @@ namespace fixedphilip
 				return std::visit([](auto& event_dispatch) -> const dpp::event_dispatch_t&
 				{
 					return event_dispatch;
-				}, 
+				},
 				*this);
 			}
 
@@ -87,11 +87,10 @@ namespace fixedphilip
 			}
 		};
 
-		using init_function = dpp::task<void>(dpp::slashcommand& command, fixedphilip::discord::bot& bot);
+		using init_function = dpp::task<bool>(dpp::slashcommand& command, fixedphilip::discord::bot& bot);
 		using run_function = dpp::task<void>(const run_event& event, fixedphilip::discord::bot& bot);
 	private:
 		const char* description_;
-		const char* version_;
 
 		init_function* init_;
 		run_function* run_;
@@ -106,18 +105,19 @@ namespace fixedphilip
 			return bot;
 		}
 	public:
-		command(const char* name, const char* description, const char* version, init_function* init, run_function* run) : named_node<command>(name), description_(description), version_(version), init_(init), run_(run) {}
+		command(const char* name, const char* description, init_function* init, run_function* run) : 
+			named_node<command>(name), description_(description), init_(init), run_(run) {}
 		~command() {}
 
 		inline auto description() { return description_; }
-		inline auto version() { return version_; }
 
-		inline dpp::task<void> init(dpp::slashcommand& command)
-		{ 
+		inline dpp::task<bool> init(dpp::slashcommand& command)
+		{
 			if (auto bot = get_bot(std::format("{} command, init", name())))
 			{
-				co_await init_(command, *bot);
+				co_return co_await init_(command, *bot);
 			}
+			co_return false;
 		}
 		inline dpp::task<void> run(const run_event& event)
 		{
@@ -133,4 +133,4 @@ namespace fixedphilip
 	};
 }
 
-#define FIXEDPHILIP_COMMAND(name, description, version) static fixedphilip::command fixedphilip_command_##name##_(#name, description, version, &fixedphilip::commands::name::init, &fixedphilip::commands::name::run)
+#define FIXEDPHILIP_COMMAND(name, description) static fixedphilip::command fixedphilip_command_##name##_(#name, description, &fixedphilip::commands::name::init, &fixedphilip::commands::name::run)

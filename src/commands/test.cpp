@@ -2,7 +2,7 @@
 
 namespace fixedphilip::commands::test
 {
-	dpp::task<void> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
+	dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
 	{
 		command.set_nsfw(false);
 
@@ -14,13 +14,13 @@ namespace fixedphilip::commands::test
 			)
 		);
 
-		bot.cluster().start_timer([](const dpp::timer& timer) -> dpp::task<void>
+		bot.cluster().start_timer([](const dpp::timer& timer)
 		{
 			auto bot = fixedphilip::discord::bot::get_instance();
 			if (!bot)
 			{
 				fixedphilip::log::error("test command timer: bot was null");
-				co_return;
+				return;
 			}
 
 			// can't believe it's this fucking difficult to get the CURRENT TIME that i have to hardcode this stupid fucking offset
@@ -48,12 +48,12 @@ namespace fixedphilip::commands::test
 					}
 				};
 				auto msg = dpp::message(std::format("it's the {}{} now, time for wordle! :3", day, get_suffix(day)));
-				co_await bot->cluster().co_direct_message_create(bot->app_owner().id, msg);
+				bot->cluster().direct_message_create(bot->app_owner().id, msg);
 			}
 		},
 		60);
 
-		co_return;
+		co_return true;
 	}
 
 	dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
@@ -82,4 +82,4 @@ namespace fixedphilip::commands::test
 	}
 }
 
-FIXEDPHILIP_COMMAND(test, "Test command", "v1");
+//FIXEDPHILIP_COMMAND(test, "Test command");
