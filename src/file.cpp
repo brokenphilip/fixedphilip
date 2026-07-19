@@ -1,5 +1,8 @@
 #include <fixedphilip/file.h>
 
+#include <filesystem>
+#include <fstream>
+
 namespace fixedphilip::file
 {
 	result base::load(const settings& load_settings)
@@ -77,7 +80,8 @@ namespace fixedphilip::file
 		}
 		return r_success;
 	}
-	inline result base::save(const settings& save_settings)
+
+	result base::save(const settings& save_settings)
 	{
 		auto& filename = save_settings.filename;
 		auto log = save_settings.log;

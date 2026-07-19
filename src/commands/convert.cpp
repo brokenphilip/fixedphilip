@@ -126,7 +126,7 @@ namespace fixedphilip::commands::convert
                         {
                             // perform the conversion and return the result
                             auto result = to_conversion_unit.to_unit_from_base_unit(from_conversion_unit.from_unit_to_base_unit(number));
-                            return std::format("### :repeat: | {}:\n> {} {} = {:.{}f} {}",
+                            return std::format("### :repeat: | {}:\n> **{}** {} = **{:.{}f}** {}",
                                 conversion_family.unit_family_name,
                                 number, from_conversion_unit.unit_pretty_print,
                                 result, precision, to_conversion_unit.unit_pretty_print);

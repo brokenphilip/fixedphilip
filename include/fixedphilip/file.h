@@ -2,6 +2,8 @@
 
 #include <fixedphilip/log.h>
 
+#include <dpp/nlohmann/json.hpp>
+
 namespace fixedphilip::file
 {
 	struct settings
@@ -49,7 +51,7 @@ namespace fixedphilip::file
 		// - 'r_open_file_error' if it failed to open the file for writing
 		// - 'r_write_error' if it failed to write contents to the file
 		// - 'r_file_not_found' if the file was not found and create_if_not_found is disabled
-		inline result save(const settings& save_settings);
+		result save(const settings& save_settings);
 	};
 
 	template <int indent = -1, char indent_char = ' '>
