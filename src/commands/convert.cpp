@@ -67,6 +67,48 @@ namespace fixedphilip::commands::convert
         return number / other;
     }
 
+    // 10^-9: nano
+    conversion_function nano_to_base = divide<1'000'000'000>;
+    conversion_function base_to_nano = multiply<1'000'000'000>;
+
+    // 10^-6: micro
+    conversion_function micro_to_base = divide<1'000'000>;
+    conversion_function base_to_micro = multiply<1'000'000>;
+
+    // 10^-3: milli
+    conversion_function milli_to_base = divide<1'000>;
+    conversion_function base_to_milli = multiply<1'000>;
+
+    // 10^-2: centi
+    conversion_function centi_to_base = divide<100>;
+    conversion_function base_to_centi = multiply<100>;
+
+    // 10^-1: deci
+    conversion_function deci_to_base = divide<10>;
+    conversion_function base_to_deci = multiply<10>;
+
+    // 10^0 (1): base (default)
+
+    // 10^3: kilo
+    conversion_function kilo_to_base = multiply<1'000>;
+    conversion_function base_to_kilo = divide<1'000>;
+
+    // 10^6: mega
+    conversion_function mega_to_base = multiply<1'000'000>;
+    conversion_function base_to_mega = divide<1'000'000>;
+
+    // 10^9: giga
+    conversion_function mega_to_base = multiply<1'000'000'000>;
+    conversion_function base_to_mega = divide<1'000'000'000>;
+
+    // 10^12: tera
+    conversion_function mega_to_base = multiply<1'000'000'000'000>;
+    conversion_function base_to_mega = divide<1'000'000'000'000>;
+
+    // 10^15: peta
+    conversion_function mega_to_base = multiply<1'000'000'000'000'000>;
+    conversion_function base_to_mega = divide<1'000'000'000'000'000>;
+
     number_t celsius_to_fahrenheit(number_t celsius)
     {
         return celsius * number_t(9) / number_t(5) + number_t(32);
@@ -79,14 +121,54 @@ namespace fixedphilip::commands::convert
 
     std::vector<conversion_family> conversion_families =
     {
-        { "Temperature",
+        { "Distance",
             {
-                { "celsius", "°C" },
-                { "c", "°C" },
+                { "nm", "nm", nano_to_base, base_to_nano },
+                { "nanometer", "nm", nano_to_base, base_to_nano },
+                { "nanometers", "nm", nano_to_base, base_to_nano },
+                { "nanometre", "nm", nano_to_base, base_to_nano },
+                { "nanometres", "nm", nano_to_base, base_to_nano },
+
+                { "um", "µm", micro_to_base, base_to_micro },
+                { "micrometer", "µm", micro_to_base, base_to_micro },
+                { "micrometers", "µm", micro_to_base, base_to_micro },
+                { "micrometre", "µm", micro_to_base, base_to_micro },
+                { "micrometres", "µm", micro_to_base, base_to_micro },
+
+                { "mm", "mm", milli_to_base, base_to_milli },
+                { "millimeter", "mm", milli_to_base, base_to_milli },
+                { "millimeters", "mm", milli_to_base, base_to_milli },
+                { "millimetre", "mm", milli_to_base, base_to_milli },
+                { "millimetres", "mm", milli_to_base, base_to_milli },
+
+                { "cm", "cm", centi_to_base, base_to_centi },
+                { "centimeter", "cm", centi_to_base, base_to_centi },
+                { "centimeters", "cm", centi_to_base, base_to_centi },
+                { "centimetre", "cm", centi_to_base, base_to_centi },
+                { "centimetres", "cm", centi_to_base, base_to_centi },
+
+                { "dm", "dm", deci_to_base, base_to_deci },
+                { "decimeter", "dm", deci_to_base, base_to_deci },
+                { "decimeters", "dm", deci_to_base, base_to_deci },
+                { "decimetre", "dm", deci_to_base, base_to_deci },
+                { "decimetres", "dm", deci_to_base, base_to_deci },
+
+                { "m", "m" },
+                { "meter", "m" },
+                { "meters", "m" },
+                { "metre", "m" },
+                { "metres", "m" },
+
+                { "km", "km", kilo_to_base, base_to_kilo },
+                { "kilometer", "km", kilo_to_base, base_to_kilo },
+                { "kilometers", "km", kilo_to_base, base_to_kilo },
+                { "kilometre", "km", kilo_to_base, base_to_kilo },
+                { "kilometres", "km", kilo_to_base, base_to_kilo },
+
+                { "in", "km", kilo_to_base, base_to_kilo },
+
                 { "fahrenheit", "°F", fahrenheit_to_celsius, celsius_to_fahrenheit },
                 { "f", "°F", fahrenheit_to_celsius, celsius_to_fahrenheit },
-                { "kelvin", "K", subtract<273.15>, add<273.15> },
-                { "k", "K", subtract<273.15>, add<273.15> },
             }
         },
         { "Speed",
@@ -95,16 +177,104 @@ namespace fixedphilip::commands::convert
                 { "kmh", "km/h" },
                 { "kph", "km/h" },
                 { "kmph", "km/h" },
-                { "mph", "mph", multiply<1.609>, divide<1.609> },
-                { "mi/h", "mph", multiply<1.609>, divide<1.609> },
+
+                { "mph", "mph", multiply<1.609344>, divide<1.609344> },
+                { "mi/h", "mph", multiply<1.609344>, divide<1.609344> },
+
                 { "m/s", "m/s", multiply<3.6>, divide<3.6> },
                 { "mps", "m/s", multiply<3.6>, divide<3.6> },
+
+                { "kn", "kn", multiply<1.852>, divide<1.852> },
+                { "kt", "kn", multiply<1.852>, divide<1.852> },
+                { "knot", "kn", multiply<1.852>, divide<1.852> },
+                { "knots", "kn", multiply<1.852>, divide<1.852> },
+            }
+        },
+        { "Temperature",
+            {
+                { "celsius", "°C" },
+                { "c", "°C" },
+
+                { "fahrenheit", "°F", fahrenheit_to_celsius, celsius_to_fahrenheit },
+                { "f", "°F", fahrenheit_to_celsius, celsius_to_fahrenheit },
+
+                { "kelvin", "K", subtract<273.15>, add<273.15> },
+                { "k", "K", subtract<273.15>, add<273.15> },
+            }
+        },
+        { "Time",
+            {
+                { "ns", "ns", divide<1'000'000'000>, multiply<1'000'000'000> },
+                { "nanosecond", "ns", divide<1'000'000'000>, multiply<1'000'000'000> },
+                { "nanoseconds", "ns", divide<1'000'000'000>, multiply<1'000'000'000> },
+
+                { "us", "µs", divide<1'000'000>, multiply<1'000'000> },
+                { "microsecond", "µs", divide<1'000'000>, multiply<1'000'000> },
+                { "microseconds", "µs", divide<1'000'000>, multiply<1'000'000> },
+                
+                { "ms", "ms", divide<1'000>, multiply<1'000> },
+                { "millisecond", "ms", divide<1'000>, multiply<1'000> },
+                { "milliseconds", "ms", divide<1'000>, multiply<1'000> },
+                
+                { "s", "s" },
+                { "second", "s" },
+                { "seconds", "s" },
+                
+                { "min", "min", multiply<60>, divide<60> },
+                { "m", "min", multiply<60>, divide<60> },
+                { "minute", "min", multiply<60>, divide<60> },
+                { "minutes", "min", multiply<60>, divide<60> },
+                
+                { "hr", "hr", multiply<3'600>, divide<3'600> },
+                { "h", "hr", multiply<3'600>, divide<3'600> },
+                { "hour", "hr", multiply<3'600>, divide<3'600> },
+                { "hours", "hr", multiply<3'600>, divide<3'600> },
+                
+                { "day", "day(s)", multiply<86'400>, divide<86'400> },
+                { "days", "day(s)", multiply<86'400>, divide<86'400> },
+                { "d", "day(s)", multiply<86'400>, divide<86'400> },
+                
+                { "mo", "solar month(s)", multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                { "month", "solar month(s)", multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                { "months", "solar month(s)", multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                { "smo", "solar month(s)", multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                { "solar month", "solar month(s)", multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                { "solar months", "solar month(s)", multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                
+                { "cmo", "calendar month(s)", multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
+                { "calendar month", "calendar month(s)", multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
+                { "calendar months", "calendar month(s)", multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
+                
+                { "y", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "yr", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "yrs", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "sy", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "syr", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "syrs", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "solar year", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { "solar years", "solar year(s)", multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                
+                { "cy", "calendar year(s)", multiply<365 * 86'400>, divide<365 * 86'400> },
+                { "cyr", "calendar year(s)", multiply<365 * 86'400>, divide<365 * 86'400> },
+                { "cyrs", "calendar year(s)", multiply<365 * 86'400>, divide<365 * 86'400> },
+                { "calendar year", "calendar year(s)", multiply<365 * 86'400>, divide<365 * 86'400> },
+                { "calendar years", "calendar year(s)", multiply<365 * 86'400>, divide<365 * 86'400> },
             }
         },
     };
 
-    std::string convert(number_t number, std::string from, std::string to, int precision)
+    std::string convert(std::string value, std::string to, int precision)
     {
+        // parsing rules:
+        // "123m" - number: "123", unit: "m"
+        // "456 c" - number: "456", unit: "c"
+        // "1 234 f" - number: "1234", unit: "f"
+        // "3 4 5 6 km" - number: "3456", unit: "km"
+        // "12.34 cm" - number: "12.34", unit: "cm"
+        // "56,78 mm" - number: "56.78", unit: "mm"
+        // "1.234.567 ms" - invalid, only spaces can be digit separators
+        //
+
         auto to_lowercase = [](unsigned char c) { return std::tolower(c); };
         fixedphilip::utils::string::to_lowercase_inplace(from);
         fixedphilip::utils::string::to_lowercase_inplace(to);
@@ -148,9 +318,8 @@ namespace fixedphilip::commands::convert
     dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
         command
-            .add_option(dpp::command_option(dpp::co_number, "value", "Number to convert the units of", true))
-            .add_option(dpp::command_option(dpp::co_string, "from", "Unit of the number to convert from", true))
-            .add_option(dpp::command_option(dpp::co_string, "to", "Unit of the number to convert to", true))
+            .add_option(dpp::command_option(dpp::co_string, "value", "Number and unit/currency to convert from", true))
+            .add_option(dpp::command_option(dpp::co_string, "to", "Unit/currency to convert the value to", true))
             .add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to display the result (2 by default)"));
 
         co_return true;
@@ -319,20 +488,9 @@ namespace fixedphilip::commands::convert
                 std::erase_if(conversion_families, [](const auto& item) { return item.unit_family_name.starts_with("Currency"); });
                 conversion_families.push_back(currency_conversion_family);
 
-                // apparently these "daily" values update every hour lol
+                // the website claims these update daily, then proceeds to specify 12 am/pm (every 12 hours???)
+                // ...when in reality, apparently, these "daily" values tend to update every hour lol
                 next_call = std::chrono::minutes(30);
-                /*
-                auto now = std::chrono::system_clock::now();
-                auto time_of_day = std::chrono::hh_mm_ss(now - std::chrono::floor<std::chrono::days>(now));
-                auto time_of_day_hours_am_pm = time_of_day.hours().count() % 12;          
-                auto total_minutes_since_noon_or_midnight = std::chrono::minutes(time_of_day_hours_am_pm) + time_of_day.minutes();
-
-                // next call times are at 12:05am and 12:05pm, when the "daily" values update
-                auto next_call_time = std::chrono::minutes(60 * 12 + 5) - total_minutes_since_noon_or_midnight;
-                fixedphilip::log::info(std::format("Updated {} currencies - next call time: {:%Hh %Mm}", 
-                    currency_conversion_family.family_units.size(), next_call_time));
-                next_call = next_call_time;
-                */
             }
             else
             {
@@ -346,20 +504,19 @@ namespace fixedphilip::commands::convert
         if (auto slash_command = event.get_slash_command())
         {
             auto interaction = slash_command->command.get_command_interaction();
-            auto value = interaction.get_value<double>(0);
-            auto from = interaction.get_value<std::string>(1);
-            auto to = interaction.get_value<std::string>(2);
+            auto value = interaction.get_value<std::string>(0);
+            auto to = interaction.get_value<std::string>(1);
             int decimals = 2;
-            if (interaction.options.size() > 3)
+            if (interaction.options.size() > 2)
             {
-                auto new_decimals = static_cast<int>(interaction.get_value<int64_t>(3));
+                auto new_decimals = static_cast<int>(interaction.get_value<int64_t>(2));
                 if (new_decimals < 0)
                 {
                     new_decimals = 0;
                 }
                 decimals = new_decimals;
             }
-            response = convert(value, from, to, decimals);
+            response = convert(value, to, decimals);
         }
 
         co_await thinking;
