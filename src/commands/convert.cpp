@@ -32,7 +32,7 @@ namespace fixedphilip::commands::convert
     or, alternatively, numbers can be tokened like with presence activity
     or, alternatively, second regex to check as "to" (first one checked as "from")
 
-    
+    BALLER SHIT: "4 hours 15 minutes to seconds" (mutliple conversions)
     */
 
     number_t number_from_string(const std::string& string)
