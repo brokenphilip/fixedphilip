@@ -4,7 +4,37 @@
 
 namespace fixedphilip::commands::convert
 {
-    using number_t = double;
+
+
+    /*
+    
+    conversion_family<typename BaseType>
+
+    using unit_to_base_fn = BaseType(const std::smatch&);
+    using base_to_unit_fn = std::string(BaseType);
+
+    each conversion_unit has its own ^^^ funcs, as well as regex
+
+    conversion_family has the convert function
+    it uses the from unit's regex to get a smatch
+    [0] entire string, [1...] params
+    from->unit_to_base gets called
+    then to->base_to_unit gets called
+    the resulting string is sent back
+    but we should either:
+    1. return std::string and do error handling if necessary
+    2. return bool for success, return std::string as reference for error/result
+    3. exceptions??????????
+    two types of regex must exist probably:
+    1. when checking for source (w/ numbers)
+    2. when checking for destination (w/o numbers)
+    regexes can't be concat'd, maybe they need to be stored as const char* instead
+    or, alternatively, numbers can be tokened like with presence activity
+    or, alternatively, second regex to check as "to" (first one checked as "from")
+
+    
+    */
+
     number_t number_from_string(const std::string& string)
     {
         return std::stod(string);
