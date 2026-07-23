@@ -8,8 +8,10 @@ namespace fixedphilip::commands::calculate
     {
         command
             .add_option(dpp::command_option(dpp::co_string, "expression", "Math expression to calculate", true))
-            .add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (no rounding by default)"))
-            .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate result digit thousands (all digits are grouped by default)"));
+            .add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (use -1 (default) for automatic)")
+                .set_min_value(-1)
+                .set_max_value(std::numeric_limits<double>::max_digits10))
+            .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (false by default)"));
         co_return true;
     }
 
@@ -26,28 +28,15 @@ namespace fixedphilip::commands::calculate
         std::string response;
         if (auto slash_command = event.get_slash_command())
         {
-            auto interaction = slash_command->command.get_command_interaction();
-            auto expression = interaction.get_value<std::string>(0);
-            int decimals = -1;
-            bool separate = false;
-
-            for (int i = 1; i < interaction.options.size(); i++)
-            {
-                auto subcommand = interaction.options[i];
-                if (subcommand.name == "decimals")
-                {
-                    decimals = static_cast<int>(interaction.get_value<int64_t>(i));
-                }
-                else if (subcommand.name == "separate")
-                {
-                    separate = interaction.get_value<bool>(i);
-                }
-            }
+            auto expression = std::get<std::string>(slash_command->get_parameter("expression"));
+            auto decimals = fixedphilip::discord::try_get_command_parameter<int64_t>(*slash_command, "decimals", -1);
+            auto separate = fixedphilip::discord::try_get_command_parameter<bool>(*slash_command, "separate", false);
 
             int error = 0;
             auto result = te_interp(expression.c_str(), &error);
             if (error)
             {
+                // "error" indicated where the parsing error occurred
                 std::string arrow(error, ' ');
                 arrow += "↑";
 
@@ -66,7 +55,7 @@ namespace fixedphilip::commands::calculate
                     result_str = std::format("{:.{}f}", result, decimals);
                 }
                 co_await thinking;
-                event.thinking_end(std::format("### :abacus: **| Result:**\n> {} = **{}**", expression, result_str));
+                event.thinking_end(std::format("### :abacus: **| Result:**\n> {} = **{}** (DEBUG: separate = {})", expression, result_str, separate));
             }
         }
     }

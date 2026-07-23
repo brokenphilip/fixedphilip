@@ -128,4 +128,14 @@ namespace fixedphilip::discord
 		fixedphilip::log::error(std::format("{}: unknown error (wrong result.value type)", log_prefix));
 		return nullptr;
 	}
+
+	template <typename T>
+	T try_get_command_parameter(const dpp::slashcommand_t& command, const std::string& param_name, T default_value)
+	{
+		if (auto param = command.get_parameter(param_name); auto value = std::get_if<T>(&param))
+		{
+			return *value;
+		}
+		return default_value;
+	}
 }
