@@ -1,6 +1,8 @@
 # fixedphilip
 <img src="https://raw.githubusercontent.com/brokenphilip/fixedphilip/refs/heads/main/assets/logo_128.png" align="right">
 
+*"when is brokenphilip getting fixed?!" -several concerned internet residents*
+
 fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library.
 
 fixedphilip is designed to support both modern slash-commands (guild and user installs), as well as old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
@@ -18,9 +20,9 @@ Some of fixedphilip's most notable features include:
 > The `/eds` command is only available through my own hosted instance, as it is closed-source.
 
 > [!IMPORTANT]
-> Currently, the bot is designed for **personal use only**:
+> Currently, the bot is intended for **personal use only**:
 > - I will not be providing a guild/user invite link for my own hosted instance to the general public, and
-> - Feature requests will likely not be considered, unless I personally have a use for them.
+> - Feature requests will likely not be considered, unless I could benefit from them myself.
 
 ## Setup
 ### ...on Windows
@@ -48,7 +50,7 @@ sudo dpkg -i dpp.deb
 ```
 
 ## Running
-Upon your first launch, it will create a default `config.json`. You must edit this file in a text editor and provide your own [bot token](https://dpp.dev/creating-a-bot-application.html). After the required modifications have been made, you can run fixedphilip as normal.
+Upon your first launch, it will create a default `config.json`. You must edit this file in a text editor and provide your own [bot token](https://dpp.dev/creating-a-bot-application.html), after which you can run fixedphilip as normal.
 
 Aside from the `token`, the `config.json` also contains the following keys (remove a key to reset it to its defaults):
 - `prefix` - the default/global chat prefix for old-style commands
