@@ -1,7 +1,7 @@
 # fixedphilip
 <img src="https://raw.githubusercontent.com/brokenphilip/fixedphilip/refs/heads/main/assets/logo_128.png" align="right">
 
-*"when is brokenphilip getting fixed?!" -several concerned internet residents*
+> *"when is brokenphilip getting fixed?!" -several concerned internet residents*
 
 fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library.
 
