@@ -4,3 +4,6 @@
 [submodule "src/commands/private"]
 	path = src/commands/private
 	url = https://github.com/brokenphilip/fixedphilip_private_commands
+[submodule "tinyexpr"]
+	path = tinyexpr
+	url = https://github.com/codeplea/tinyexpr
