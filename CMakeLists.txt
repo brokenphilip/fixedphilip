@@ -6,9 +6,10 @@ set(BOT_NAME "fixedphilip")
 project(${BOT_NAME})
 
 aux_source_directory("src" core_src)
+aux_source_directory("src/tinyexpr" core_src_tinyexpr)
 aux_source_directory("src/commands" core_src_commands)
 aux_source_directory("src/commands/private" core_src_commands_private)
-add_executable(${BOT_NAME} ${core_src} ${core_src_commands} ${core_src_commands_private})
+add_executable(${BOT_NAME} ${core_src} ${core_src_tinyexpr} ${core_src_commands} ${core_src_commands_private})
 
 target_compile_features(${BOT_NAME} PUBLIC cxx_std_20)
 

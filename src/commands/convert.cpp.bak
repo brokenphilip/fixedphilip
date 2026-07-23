@@ -4,13 +4,29 @@
 
 #include <regex>
 
+#define 
+
 namespace fixedphilip::commands::convert
 {
     template <typename BaseUnitType = double>
-    struct conversion_unit
+    struct conversion_unit_base
     {
         using unit_to_base_fn = BaseUnitType(const std::smatch&);
         using base_to_unit_fn = std::string(BaseUnitType);
+    };
+
+    template <>
+    struct conversion_unit_base<double>
+    {
+
+    };
+
+    template <typename BaseUnitType = double>
+    struct conversion_unit : public conversion_unit_base<BaseUnitType>
+    {
+        
+
+
     };
 
     template <typename BaseUnitType = double>
