@@ -1,8 +1,8 @@
 #include <fixedphilip/command.h>
 
-#include <tinyexpr/tinyexpr.h>
+#include <tinyexpr.h>
 
-namespace fixedphilip::commands::calcluate
+namespace fixedphilip::commands::calculate
 {
     dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
@@ -72,4 +72,4 @@ namespace fixedphilip::commands::calcluate
     }
 }
 
-FIXEDPHILIP_COMMAND(calcluate, "Calculate a math expression");
+FIXEDPHILIP_COMMAND(calculate, "Calculate a math expression");
