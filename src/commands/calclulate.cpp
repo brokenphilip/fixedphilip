@@ -52,7 +52,7 @@ namespace fixedphilip::commands::calcluate
                 arrow += "↑";
 
                 co_await thinking;
-                event.thinking_end(dpp::message(std::format(":x: **| Error parsing expression:**\n```\n{}\n{}\n```", expression, arrow)));
+                event.thinking_end(std::format(":x: **| Error parsing expression:**\n```\n{}\n{}\n```", expression, arrow));
             }
             else
             {
@@ -66,7 +66,7 @@ namespace fixedphilip::commands::calcluate
                     result_str = std::format("{:.{}f}", result, decimals);
                 }
                 co_await thinking;
-                event.thinking_end(dpp::message(std::format("### :abacus: **| Result:**\n> {} = **{}**", expression, result_str)));
+                event.thinking_end(std::format("### :abacus: **| Result:**\n> {} = **{}**", expression, result_str));
             }
         }
     }

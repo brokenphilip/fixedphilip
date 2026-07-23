@@ -586,7 +586,7 @@ namespace fixedphilip::commands::convert
         }
 
         co_await thinking;
-        event.thinking_end(dpp::message(response));
+        event.thinking_end(response);
     }
 }
 
