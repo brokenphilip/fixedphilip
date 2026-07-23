@@ -33,9 +33,19 @@ namespace fixedphilip::utils::string
         }
     }
 
-    inline void to_lowercase_inplace(std::string& source)
+    namespace inplace
     {
-        auto to_lowercase_fn = [](unsigned char c) { return std::tolower(c); };
-        std::ranges::transform(source, source.begin(), to_lowercase_fn);
+        inline void to_lowercase(std::string& source_dest)
+        {
+            auto to_lowercase_fn = [](unsigned char c) { return std::tolower(c); };
+            std::ranges::transform(source_dest, source_dest.begin(), to_lowercase_fn);
+        }
+
+        inline void remove_multi_whitespace(std::string& source_dest)
+        {
+            auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+            auto new_end = std::unique(source_dest.begin(), source_dest.end(), both_are_spaces);
+            source_dest.erase(new_end, source_dest.end());
+        }
     }
 }

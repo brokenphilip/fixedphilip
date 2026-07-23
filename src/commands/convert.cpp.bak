@@ -2,8 +2,24 @@
 #include <fixedphilip/utils/time.h>
 #include <fixedphilip/utils/string.h>
 
+#include <regex>
+
 namespace fixedphilip::commands::convert
 {
+    template <typename BaseUnitType = double>
+    struct conversion_unit
+    {
+        using unit_to_base_fn = BaseUnitType(const std::smatch&);
+        using base_to_unit_fn = std::string(BaseUnitType);
+    };
+
+    template <typename BaseUnitType = double>
+    struct conversion_unit_family
+    {
+        std::string name;
+        std::vector<conversion_unit<BaseUnitType>> conversion_units;
+
+    };
 
 
     /*
@@ -34,6 +50,10 @@ namespace fixedphilip::commands::convert
 
     BALLER SHIT: "4 hours 15 minutes to seconds" (mutliple conversions)
     */
+
+
+
+
 
     number_t number_from_string(const std::string& string)
     {
