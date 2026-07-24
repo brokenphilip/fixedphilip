@@ -109,7 +109,7 @@ namespace fixedphilip::math
 
 	inline std::vector<conversion_family> conversion_families
     {
-        { "Distance",
+        { "Length",
             {
                 { { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano },
                 { { "µm", "um", "micrometer", "micrometers", "micrometre", "micrometres" }, micro_to_base, base_to_micro },
