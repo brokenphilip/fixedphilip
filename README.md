@@ -139,26 +139,28 @@ Adding new features to fixedphilip is done by creating commands. Each command's 
 
 namespace fixedphilip::commands::example
 {
-    // This callback is run when the command is being created/initialized, right before it gets registered
+    // This callback runs when the command is being created/initialized, right before it's registered
     // Return true if initialization was successful and register the command, false otherwise
     dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
     {
-        // You may modify the slash command reference here (to add options to it, or set its flags)
+        // Here you can modify the "command" reference (to add options to it, or set its flags)
+        // Of course, you may run your own custom initialization code here too
         co_return true;
     }
 
-    // This callback is run when the command is being executed, either via slash-command or by old-style (chat prefix) command
-    // Use the "bot" reference to access the dpp::cluster responsible for the command, and other bot-specific info
+	// This callback runs when either the slash-command or the old-style (prefix) command is executed
     dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
     {
-        // "event" is a variant which may contain a dpp::message_create_t or a dpp::slashcommand_t
-        // ...but it also contains helper variant-agnostic functions such as "reply(...)"
+        // "event" is a variant which contains either a dpp::message_create_t or a dpp::slashcommand_t
+        // (you can convert the "event" to either of the two using run_event's get_*() functions)
+        // ...but it also contains variant-agnostic helper functions, such as "reply(...)"
         event.reply("Hello from example command! :3");
         co_return;
     }
 }
 
-// This macro allocates your command (fixedphilip::commands::example) in static memory, and adds it to its own internal linked list
-// This linked list is sorted alphabetically (based on name) upon each addition - commands are always initialized in this order
+// This macro allocates your "/example" command (ie. fixedphilip::commands::example) in static memory
+// ...adding it to the alphabetically-sorted (based on command name) internal linked list of commands
+// Commands will always be created/initialized in the (alphabetical) order of the linked list
 FIXEDPHILIP_COMMAND(example, "This is an example command's description");
 ```

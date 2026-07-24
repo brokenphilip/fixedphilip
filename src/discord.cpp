@@ -357,6 +357,22 @@ namespace fixedphilip::discord
         cluster_.on_ready(on_ready);
     }
 
+    bot::bot(const config& config) : config_(config), cluster_(config.token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members)
+    {
+        if (instance_)
+        {
+            throw std::logic_error("An instance of fixedphilip::discord::bot already exists - multiple instances are not allowed");
+        }
+        instance_ = this;
+    }
+
+    bool bot::setup()
+    {
+        fetch_app_info_async();
+        register_events();
+        return true;
+    }
+
     dpp::task<bot::counts> bot::co_get_counts()
     {
         counts counts;

@@ -71,15 +71,10 @@ namespace fixedphilip::discord
 		void fetch_app_info_async();
 		void register_events();
 	public:
-		inline bot(const config& config) : config_(config), cluster_(config.token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members) { instance_ = this; }
+		bot(const config& config);
 		inline ~bot() { instance_ = nullptr; }
 
-		inline bool setup()
-		{
-			fetch_app_info_async();
-			register_events();
-			return true;
-		}
+		bool setup();
 		inline void run_blocking() { cluster_.start(); }
 
 		inline const auto& prefix() { return config_.prefix; }
