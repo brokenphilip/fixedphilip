@@ -27,7 +27,7 @@ namespace fixedphilip
 			void thinking_end(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const;
 			inline void thinking_end(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { thinking_end(dpp::message(msg), callback); }
 
-			void reply_not_impl_use_other() const;
+			void reply_not_impl_use_other(fixedphilip::discord::bot& bot) const;
 		};
 
 		using init_function = dpp::task<bool>(dpp::slashcommand& command, fixedphilip::discord::bot& bot);
@@ -37,8 +37,6 @@ namespace fixedphilip
 
 		init_function* init_;
 		run_function* run_;
-
-		fixedphilip::discord::bot* get_bot(const std::string& log_prefix);
 	public:
 		command(const char* name, const char* description, init_function* init, run_function* run) : 
 			named_node<command>(name), description_(description), init_(init), run_(run) {}
@@ -46,8 +44,8 @@ namespace fixedphilip
 
 		inline auto description() { return description_; }
 
-		dpp::task<bool> init(dpp::slashcommand& command);
-		dpp::task<void> run(const run_event& event);
+		dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot) { co_return co_await init_(command, bot); }
+		dpp::task<void> run(const run_event& event, fixedphilip::discord::bot& bot) { co_await run_(event, bot); }
 	};
 }
 

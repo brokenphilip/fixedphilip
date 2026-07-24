@@ -19,7 +19,7 @@ namespace fixedphilip::commands::calculate
     {
         if (auto message_create = event.get_message_create())
         {
-            event.reply_not_impl_use_other();
+            event.reply_not_impl_use_other(bot);
             co_return;
         }
 
@@ -36,12 +36,8 @@ namespace fixedphilip::commands::calculate
             auto result = te_interp(expression.c_str(), &error);
             if (error)
             {
-                // "error" indicated where the parsing error occurred
-                std::string arrow(error, ' ');
-                arrow += "↑";
-
                 co_await thinking;
-                event.thinking_end(std::format(":x: **| Error parsing expression:**\n```\n{}\n{}\n```", expression, arrow));
+                event.thinking_end(std::format(":x: **| Error parsing expression:**\n```\n{}\n{}\n```", expression, std::string(error, ' ') + "↑"));
             }
             else
             {

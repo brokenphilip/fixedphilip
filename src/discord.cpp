@@ -43,9 +43,9 @@ namespace fixedphilip::discord
         if (try_at(data, "presence_status", presence_status_string))
         {
             auto it = std::find_if(status_to_string.begin(), status_to_string.end(), [&presence_status_string](const auto& pair)
-                {
-                    return pair.second == presence_status_string;
-                });
+            {
+                return pair.second == presence_status_string;
+            });
             if (it == status_to_string.end())
             {
                 fixedphilip::log::error("invalid 'presence_status' (reverting to default) - must be either one of: offline, online, dnd, idle, invisible");
@@ -152,7 +152,7 @@ namespace fixedphilip::discord
                 // old-style prefix commands - discouraged by Discord, but still convenient to have
                 if (event.msg.content == command || event.msg.content.starts_with(command + " "))
                 {
-                    co_await iter->run(fixedphilip::command::run_event(event));
+                    co_await iter->run(fixedphilip::command::run_event(event), *instance_);
                     co_return;
                 }
                 iter = iter->next();
@@ -179,7 +179,7 @@ namespace fixedphilip::discord
     {
         if (!instance_)
         {
-            fixedphilip::log::error("on_slashcommand: bot was null");
+            fixedphilip::log::error(std::format("on_slashcommand ({}): bot was null", event.command.get_command_name()));
             co_return;
         }
 
@@ -188,7 +188,7 @@ namespace fixedphilip::discord
         {
             if (event.command.get_command_name() == iter->name())
             {
-                co_await iter->run(fixedphilip::command::run_event(event));
+                co_await iter->run(fixedphilip::command::run_event(event), *instance_);
                 co_return;
             }
             iter = iter->next();
@@ -209,7 +209,7 @@ namespace fixedphilip::discord
 
             // we want to guarantee that commands are initialized in-order, so we co_await their init
             // not to mention "command" can be a dangling reference if "commands" goes out-of-scope and gets destroyed
-            auto success = co_await iter->init(command);
+            auto success = co_await iter->init(command, *this);
             if (success)
             {
                 commands.push_back(std::move(command));
@@ -298,7 +298,7 @@ namespace fixedphilip::discord
                 fixedphilip::log::info("Instance owner is: " + app_owner.username);
 
                 // check for any privileged intents - if we don't have permission to use them, disable them
-                uint32_t disabled_intents = 0;
+                uint32_t intents_to_disable = 0;
 
                 if (!(app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members)))
                 {
@@ -310,7 +310,7 @@ namespace fixedphilip::discord
                         "such as displaying accurate statistics as to how many users the bot is serving, will not work for this session. "
                         "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
                     );
-                    disabled_intents |= dpp::i_guild_members;
+                    intents_to_disable |= dpp::i_guild_members;
                 }
 
                 if (!(app->flags & (dpp::apf_gateway_message_content_limited | dpp::apf_gateway_message_content)))
@@ -322,16 +322,16 @@ namespace fixedphilip::discord
                         "(when a message is edited), such as old-style prefix commands, will not work for this session. "
                         "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
                     );
-                    disabled_intents |= dpp::i_message_content;
+                    intents_to_disable |= dpp::i_message_content;
                 }
                 else
                 {
                     cluster.on_message_create(on_message_create);
                 }
 
-                if (disabled_intents)
+                if (intents_to_disable)
                 {
-                    cluster.intents &= ~disabled_intents;
+                    cluster.intents &= ~intents_to_disable;
 
                     // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
                     // we don't need to reconnect them manually - they'll automatically reconnect anyways
@@ -341,7 +341,7 @@ namespace fixedphilip::discord
                         auto client = shard.second;
                         if (client)
                         {
-                            client->intents &= ~disabled_intents;
+                            client->intents &= ~intents_to_disable;
                         }
                     }
                 }
@@ -352,7 +352,7 @@ namespace fixedphilip::discord
     void bot::register_events()
     {
         cluster_.on_log(dpp::utility::cout_logger());
-        // on_message_create is registered by fetch_app_info_async
+        // on_message_create is registered on demand by fetch_app_info_async
         cluster_.on_slashcommand(on_slashcommand);
         cluster_.on_ready(on_ready);
     }
@@ -363,74 +363,77 @@ namespace fixedphilip::discord
         auto guild_cache = dpp::get_guild_cache();
         if (guild_cache)
         {
-            std::vector<dpp::snowflake> users;
+            co_return counts;
+        }
 
-            int server_count = 0;
+        std::vector<dpp::snowflake> users;
 
-            // this fallback is used in case we lack the necessary intent for accurate results
-            int fallback_user_count = 0;
+        int server_count = 0;
 
-            // we must lock the mutex while we're using the cache
+        // this fallback is used in case we lack the necessary intent for accurate results
+        int fallback_user_count = 0;
+
+        // we must lock the mutex while we're using the cache
+        {
+            std::shared_lock _(guild_cache->get_mutex());
+            auto& guilds = guild_cache->get_container();
+
+            for (const auto& [guild_snowflake, guild] : guilds)
             {
-                std::shared_lock _(guild_cache->get_mutex());
-                auto& guilds = guild_cache->get_container();
-
-                for (const auto& [guild_snowflake, guild] : guilds)
+                if (!guild)
                 {
-                    if (!guild)
+                    continue;
+                }
+                for (const auto& [member_snowflake, member] : guild->members)
+                {
+                    auto user = member.get_user();
+                    if (!user)
                     {
                         continue;
                     }
-                    for (const auto& [member_snowflake, member] : guild->members)
+                    if (user->is_bot())
                     {
-                        auto user = member.get_user();
-                        if (!user)
-                        {
-                            continue;
-                        }
-                        if (user->is_bot())
-                        {
-                            continue;
-                        }
-                        users.push_back(member_snowflake);
+                        continue;
                     }
-                    fallback_user_count += guild->member_count;
+                    users.push_back(member_snowflake);
                 }
-                server_count = guilds.size();
+                fallback_user_count += guild->member_count;
             }
-
-            std::sort(users.begin(), users.end());
-            auto last = std::unique(users.begin(), users.end());
-            users.erase(last, users.end());
-
-            // cache these for later use, as we will only call the api once per interval
-            static int user_install_count = -1;
-            static bool has_guild_members_intent = false;
-            static auto next_call = std::chrono::minutes(1);
-            if (fixedphilip::utils::time::run_if_passed<struct fetch_app_data>(next_call))
-            {
-                auto result = co_await cluster_.co_current_application_get();
-                if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))
-                {
-                    // these update daily, so one hour is generous enough
-                    next_call = std::chrono::minutes(60);
-
-                    user_install_count = app->approximate_user_install_count;
-                    has_guild_members_intent = (app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
-                }
-                else
-                {
-                    // cached values are good enough, but try to update them again a bit later
-                    next_call = std::chrono::minutes(1);
-                }
-            }
-
-            counts.servers = server_count;
-            counts.users = has_guild_members_intent ? users.size() : fallback_user_count;
-            counts.users_fallback = !has_guild_members_intent;
-            counts.user_installs = user_install_count;
-            counts.total_users = user_install_count >= 0 ? counts.users + user_install_count : -1;
+            server_count = guilds.size();
         }
+
+        std::sort(users.begin(), users.end());
+        auto last = std::unique(users.begin(), users.end());
+        users.erase(last, users.end());
+
+        // cache these for later use, as we will only call the api once per interval
+        static int user_install_count = -1;
+        static bool has_guild_members_intent = false;
+
+        static auto next_call = std::chrono::minutes(1);
+        if (fixedphilip::utils::time::run_if_passed<struct fetch_app_data>(next_call))
+        {
+            auto result = co_await cluster_.co_current_application_get();
+            if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))
+            {
+                // these update daily, so one hour is generous enough
+                next_call = std::chrono::minutes(60);
+
+                user_install_count = app->approximate_user_install_count;
+                has_guild_members_intent = (app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members));
+            }
+            else
+            {
+                // cached values are good enough, but try to update them again a bit later
+                next_call = std::chrono::minutes(1);
+            }
+        }
+
+        counts.servers = server_count;
+        counts.users = has_guild_members_intent ? users.size() : fallback_user_count;
+        counts.users_fallback = !has_guild_members_intent;
+        counts.user_installs = user_install_count;
+        counts.total_users = user_install_count >= 0 ? counts.users + user_install_count : -1;
         co_return counts;
     }
 }

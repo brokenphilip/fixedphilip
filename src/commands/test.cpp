@@ -76,7 +76,7 @@ namespace fixedphilip::commands::test
 		}
 		else if (auto message_create = event.get_message_create())
 		{
-			event.reply_not_impl_use_other();
+			event.reply_not_impl_use_other(bot);
 		}
 		co_return;
 	}

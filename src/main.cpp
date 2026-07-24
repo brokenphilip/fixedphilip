@@ -30,6 +30,6 @@ int main()
         bot.run_blocking();
     }
 
-    fixedphilip::log::info("Cluster shards terminated - shutting down...");
+    fixedphilip::log::info("Bot terminated - shutting down...");
     return 0;
 }
