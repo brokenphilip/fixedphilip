@@ -1,6 +1,10 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
 
 namespace fixedphilip::utils::string
 {
@@ -31,6 +35,12 @@ namespace fixedphilip::utils::string
             str.replace(start_pos, from.length(), to);
             start_pos += to.length();
         }
+    }
+
+    inline std::vector<std::string> split_by_whitespace(const std::string& str)
+    {
+        std::istringstream iss(str);
+        return { (std::istream_iterator<std::string>(iss)), std::istream_iterator<std::string>() };
     }
 
     namespace inplace

@@ -4,6 +4,8 @@
 
 #include <dpp/nlohmann/json.hpp>
 
+#include <format>
+
 namespace fixedphilip::file
 {
 	struct settings

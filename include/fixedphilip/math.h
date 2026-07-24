@@ -2,108 +2,92 @@
 
 #include <fixedphilip/utils/string.h>
 
-#include <tinyexpr.h>
-
-#include <string>
-#include <vector>
-#include <ranges>
-#include <algorithm>
-#include <variant>
-#include <sstream>
 #include <functional>
-#include <format>
 
 namespace fixedphilip::math
 {
-    /*
-
-conversion_family<typename BaseType>
-
-using unit_to_base_fn = BaseType(const std::smatch&);
-using base_to_unit_fn = std::string(BaseType);
-
-each conversion_unit has its own ^^^ funcs, as well as regex
-
-conversion_family has the convert function
-it uses the from unit's regex to get a smatch
-[0] entire string, [1...] params
-from->unit_to_base gets called
-then to->base_to_unit gets called
-the resulting string is sent back
-but we should either:
-1. return std::string and do error handling if necessary
-2. return bool for success, return std::string as reference for error/result
-3. exceptions??????????
-two types of regex must exist probably:
-1. when checking for source (w/ numbers)
-2. when checking for destination (w/o numbers)
-regexes can't be concat'd, maybe they need to be stored as const char* instead
-or, alternatively, numbers can be tokened like with presence activity
-or, alternatively, second regex to check as "to" (first one checked as "from")
-
-BALLER SHIT: "4 days 15 hours to minutes seconds" (mutliple conversions)
-
-just search for "s" or "seconds" or something, everything to the left is an expression, everything to the right is potentially another expression-unit pair
-be aware of ambiguity "m" as "minutes" or "meters" (depends on destination unit, so maybe check that first, if it's still ambiguous check any other potential from units (cuz there can be multiple))
-some units can't be divided, such as converting to "euros and dollars" (how many dollars in a euro? doesn't make sense lmfao),
-so maybe it's best to have separate unique destination-only units like "ftin", "hhmmss" etc... (but still only use "ft"+"in", "h"+"m"+"s" for the from units)
-
-keep the conversion family system, but instead of number_t(number_t) use strings (to account for ft-in (5'10, 5'10"), hexadecimal (0xABC, ABCh) etc...)
-virtual unit conversion functions will have to be virtual
-each unit will have to be instantiated on its own (maybe not
- [RUSH],
-brokenphilip [RUSH],  — 21-Jul-26 12:53
-maybe not
- [RUSH],
-brokenphilip [RUSH],  — 21-Jul-26 12:54
-you can't type out the unit after the fact either, you must do it here
-to print stuff like 5 ft 10 in
-
-*/
-
-	//using number_t = double;
-	
-	//union number_t
-	//{
-	//	double number_dbl;
-	//	int64_t number_i64;
-	//};
-
-	using number_t = std::variant<double, int64_t>;
+	using number_t = double;
+	using conversion_fn = std::function<number_t(number_t)>;
+    inline number_t string_to_number(const std::string& str) { return std::stod(str); }
 
 	// (string ->) unit -> base -> unit (-> string)
-	using string_to_unit_fn = std::function<number_t(const std::string&)>;
-	using unit_to_base_fn = std::function<number_t(number_t)>;
-	using base_to_unit_fn = std::function<number_t(number_t)>;
+	using string_to_unit_fn = std::function<number_t(const std::string& str)>;
+	using unit_to_base_fn = conversion_fn;
+	using base_to_unit_fn = conversion_fn;
 	using unit_to_string_fn = std::function<std::string(number_t, int, bool)>;
 
-	number_t parse_expression_throws(const std::string& expression)
+	template <number_t other>
+	number_t add(number_t number)
 	{
-		int error = 0;
-		auto result = te_interp(expression.c_str(), &error);
-		if (error)
-		{
-			throw;
-		}
-		return result;
+		return number + number_t(other);
 	}
 
-	number_t return_self(number_t self)
+	template <number_t other>
+	number_t subtract(number_t number)
 	{
-		return self;
+		return number - number_t(other);
 	}
 
-	std::string format_unit(const std::string& name, number_t value, int decimals, bool separate)
+	template <number_t other>
+	number_t multiply(number_t number)
 	{
-		if (decimals < 0)
-		{
-			return std::format("{} {}", value, name);
-		}
-		else
-		{
-			return std::format("{:.{}f} {}", value, decimals, name);
-		}
+		return number * number_t(other);
 	}
+
+	template <number_t other>
+	number_t divide(number_t number)
+	{
+		return number / number_t(other);
+	}
+
+    // 10^-9: nano
+    inline conversion_fn nano_to_base = divide<1'000'000'000.0>;
+    inline conversion_fn base_to_nano = multiply<1'000'000'000.0>;
+
+    // 10^-6: micro
+    inline conversion_fn micro_to_base = divide<1'000'000.0>;
+    inline conversion_fn base_to_micro = multiply<1'000'000.0>;
+
+    // 10^-3: milli
+    inline conversion_fn milli_to_base = divide<1'000.0>;
+    inline conversion_fn base_to_milli = multiply<1'000.0>;
+
+    // 10^-2: centi
+    inline conversion_fn centi_to_base = divide<100.0>;
+    inline conversion_fn base_to_centi = multiply<100.0>;
+
+    // 10^-1: deci
+    inline conversion_fn deci_to_base = divide<10.0>;
+    inline conversion_fn base_to_deci = multiply<10.0>;
+
+    // 10^0 (1): base (default)
+
+    // 10^3: kilo
+    inline conversion_fn kilo_to_base = multiply<1'000.0>;
+    inline conversion_fn base_to_kilo = divide<1'000.0>;
+
+    // 10^6: mega
+    inline conversion_fn mega_to_base = multiply<1'000'000.0>;
+    inline conversion_fn base_to_mega = divide<1'000'000.0>;
+
+    // 10^9: giga
+    inline conversion_fn giga_to_base = multiply<1'000'000'000.0>;
+    inline conversion_fn base_to_giga = divide<1'000'000'000.0>;
+
+    // 10^12: tera
+    inline conversion_fn tera_to_base = multiply<1'000'000'000'000.0>;
+    inline conversion_fn base_to_tera = divide<1'000'000'000'000.0>;
+
+    // 10^15: peta
+    inline conversion_fn peta_to_base = multiply<1'000'000'000'000'000.0>;
+    inline conversion_fn base_to_peta = divide<1'000'000'000'000'000.0>;
+
+	inline number_t celsius_to_fahrenheit(number_t celsius) { return celsius * number_t(9) / number_t(5) + number_t(32); }
+	inline number_t fahrenheit_to_celsius(number_t fahrenheit) { return (fahrenheit - number_t(32)) * number_t(5) / number_t(9); }
+
+	number_t parse_expression_throws(const std::string& expression);
+	inline number_t return_self(number_t self) { return self; }
+	std::string format_unit(const std::string& name, number_t value, int decimals, bool separate);
 
 	struct conversion_unit
 	{
@@ -120,184 +104,53 @@ to print stuff like 5 ft 10 in
 	struct conversion_family
 	{
 		std::string name;
-
 		std::vector<conversion_unit> units;
-
-
-		enum convert_result
-		{
-			r_success,
-		};
-
-		convert_result convert(const std::string& input, const std::string& destination_units, BaseType* result)
-		{
-			if (input.empty())
-			{
-				// Error: no input specified
-			}
-
-			if (destination_units.empty())
-			{
-				// Error: no destination units specified
-			}
-
-			auto input_lower = input;
-			fixedphilip::utils::string::inplace::to_lowercase(input_lower);
-			//auto input_splits = input_lower | std::views::split(' ') | std::ranges::to<std::vector<std::string>>();
-
-			std::istringstream input_iss(input_lower);
-			std::vector<std::string> input_splits;
-
-			std::string input_split_temp;
-			while (input_iss >> input_split_temp)
-			{
-				input_splits.push_back(input_split_temp);
-			}
-			
-			auto dest_units_lower = destination_units;
-			fixedphilip::utils::string::inplace::to_lowercase(dest_units_lower);
-			//auto dest_units_splits = dest_units_lower | std::views::split(' ') | std::ranges::to<std::vector<std::string>>();
-
-			std::istringstream dest_units_iss(dest_units_lower);
-			std::vector<std::string> dest_units_splits;
-
-			std::string dest_unit_split_temp;
-			while (dest_units_iss >> dest_unit_split_temp)
-			{
-				dest_units_splits.push_back(dest_unit_split_temp);
-			}
-
-			struct find_result
-			{
-				conversion_unit& unit;
-				size_t index;
-			};
-			std::vector<find_result> from_results, to_results;
-
-			for (auto& unit : units)
-			{
-				for (auto& alias : unit.aliases)
-				{
-					for (int i = 0; i < input_splits.size(); i++)
-					{
-						if (alias == input_splits[i])
-						{
-							from_results.emplace_back(unit, i);
-						}
-					}
-
-					for (int i = 0; i < dest_units_splits.size(); i++)
-					{
-						if (alias == dest_units_splits[i])
-						{
-							to_results.emplace_back(unit, i);
-						}
-					}
-				}
-			}
-
-			if (from_results.empty())
-			{
-				// Error: no compatible "from" units
-			}
-
-			if (to_results.empty())
-			{
-				// Error: no compatible "to" units
-			}
-
-			if (to_results.size() != dest_units_splits.size())
-			{
-				std::vector<std::string> bad_units;
-
-				for (int i = 0; i < dest_units_splits.size(); i++)
-				{
-					if (!std::any_of(to_results.begin(), to_results.end(), [i](const find_result& fr) { fr.index == i; }))
-					{
-						bad_units.push_back(dest_units_splits[i]);
-					}
-				}
-
-				// Error: unrecognized unit(s) - bad_units
-			}
-
-			// sort by index, ascending
-			std::sort(from_results.begin(), from_results.end(), [](const find_result& a, const find_result& b)
-			{
-				return a.index < b.index;
-			});
-
-			auto last_from_index = from_results.back().index;
-			if (last_from_index != input_splits.size() - 1)
-			{
-				std::string bad_tokens = "";
-
-				bool first = true;
-				for (int i = last_from_index; i < input_splits.size(); i++)
-				{
-					if (!first)
-					{
-						bad_tokens += " ";
-					}
-					bad_tokens += input_splits[i];
-
-					first = false;
-				}
-				// Error: unindentified token(s) - bad_tokens
-			}
-
-			// sort by unit-to-base, descending
-			std::sort(to_results.begin(), to_results.end(), [](const find_result& a, const find_result& b)
-			{
-				return false;
-			});
-
-			/*
-
-			check if all to_results unit-to-bases are linear
-			
-			eg. for unit-to-base(1)
-
-			hours minutes seconds
-			3600  60      1
-			
-			unit-to-base(2) should equal to
-
-			hours minutes seconds
-			7200  120     2
-
-			this will fail for kelvin, fahrenheit and similar
-
-			additionally, check if any unit-to-bases are equal
-			these are also incompatible
-			
-			*/
-
-			BaseType result_in_base_units = {};
-			for (auto& from_result : from_results)
-			{
-				// result_in_base_units += from_result.unit.unit_to_base(...);
-				// do not parse expressions here, leave that to the units themselves
-				// bcs some units only parse text and don't actually convert, eg. hex to binary or similar
-			}
-
-			for (auto& to_result : to_results)
-			{
-				// convert in order, eg. hours -> minutes -> seconds
-			}
-		}
 	};
 
-	std::vector<conversion_family> conversion_families;
+	inline std::vector<conversion_family> conversion_families
+    {
+        { "Distance",
+            {
+                { { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano },
+                { { "µm", "um", "micrometer", "micrometers", "micrometre", "micrometres" }, micro_to_base, base_to_micro },
+                { { "mm", "millimeter", "millimeters", "millimetre", "millimetres" }, milli_to_base, base_to_milli },
+                { { "cm", "centimeter", "centimeters", "centimetre", "centimetres" }, centi_to_base, base_to_centi },
+                { { "dm", "decimeter", "decimeters", "decimetre", "decimetres" }, deci_to_base, base_to_deci },
+                { { "m", "meter", "meters", "metre", "metres" } },
+                { { "km", "kilometer", "kilometers", "kilometre", "kilometres" }, kilo_to_base, base_to_kilo },
+            }
+        },
+        { "Speed",
+            {
+                { { "km/h", "kmh", "kph", "kmph" } },
+                { { "mph", "mi/h" }, multiply<1.609344>, divide<1.609344> },
+                { { "m/s", "mps"}, multiply<3.6>, divide<3.6> },
+                { { "kn", "kt", "knot", "knots"}, multiply<1.852>, divide<1.852> },
+            }
+        },
+        { "Temperature",
+            {
+                { { "°C", "c", "celsius"} },
+                { { "°F", "f", "fahrenheit"}, fahrenheit_to_celsius, celsius_to_fahrenheit },
+                { { "K", "k", "kelvin"}, subtract<273.15>, add<273.15> },
+            }
+        },
+        { "Time",
+            {
+                { { "ns", "nsec", "nsecs", "nanosecond", "nanoseconds" }, nano_to_base, base_to_nano },
+                { { "µs", "us", "usec", "usecs", "microsecond", "microseconds" }, micro_to_base, base_to_micro },
+                { { "ms", "msec", "msecs", "millisecond", "milliseconds" }, milli_to_base, base_to_milli },
+                { { "s", "sec", "secs", "second", "seconds" } },
+                { { "min", "m", "mins", "minute", "minutes" }, multiply<60.0>, divide<60.0> },
+                { { "hr", "h", "hrs", "hour", "hours" }, multiply<3'600.0>, divide<3'600.0> },
+                { { "day(s)", "d", "day", "days"}, multiply<86'400.0>, divide<86'400.0> },
+                { { "solar month(s)", "mo", "month", "months", "smo", "solar month", "solar months" }, multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                { { "calendar month(s)", "cmo", "calendar month", "calendar months" }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
+                { { "solar year(s)", "y", "yr", "yrs", "sy", "syr", "syrs", "solar year", "solar years" }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                { { "calendar year(s)", "cy", "cyr", "cyrs", "calendar year", "calendar years" }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
+            }
+        },
+    };
 
-	void convert(const std::string& input, const std::string& destination_units)
-	{
-		for (auto& conversion_family : conversion_families)
-		{
-			for (auto& unit : conversion_family.units)
-			{
-
-			}
-		}
-	}
+	std::string convert(const std::string& input, const std::string& destination_units, int decimals = -1, bool separate = false, number_t* result_if_single_dest_unit = nullptr);
 }

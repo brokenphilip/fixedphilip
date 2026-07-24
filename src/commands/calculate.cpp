@@ -12,6 +12,7 @@ namespace fixedphilip::commands::calculate
                 .set_min_value(-1)
                 .set_max_value(std::numeric_limits<double>::max_digits10))
             .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (false by default)"));
+
         co_return true;
     }
 
