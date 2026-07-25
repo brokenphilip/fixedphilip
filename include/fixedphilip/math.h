@@ -2,6 +2,9 @@
 
 #include <fixedphilip/utils/string.h>
 
+#include <dpp/coro/task.h>
+#include <dpp/nlohmann/json.hpp>
+
 #include <functional>
 
 namespace fixedphilip::math
@@ -85,72 +88,87 @@ namespace fixedphilip::math
 	inline number_t celsius_to_fahrenheit(number_t celsius) { return celsius * number_t(9) / number_t(5) + number_t(32); }
 	inline number_t fahrenheit_to_celsius(number_t fahrenheit) { return (fahrenheit - number_t(32)) * number_t(5) / number_t(9); }
 
-	number_t parse_expression_throws(const std::string& expression);
+	number_t parse_expression_throws(const std::string& expression, const std::string& name);
 	inline number_t return_self(number_t self) { return self; }
 	std::string format_unit(const std::string& name, number_t value, int decimals, bool separate);
 
-	struct conversion_unit
-	{
-		std::vector<std::string> aliases;
-
-		unit_to_base_fn unit_to_base = return_self;
-		base_to_unit_fn base_to_unit = return_self;
-
-		string_to_unit_fn string_to_unit = parse_expression_throws;
-		unit_to_string_fn unit_to_string = [first_alias = aliases[0]](number_t unit, int decimals, bool separate) 
-			{ return format_unit(first_alias, unit, decimals, separate); };
-	};
-
-	struct conversion_family
-	{
-		std::string name;
-		std::vector<conversion_unit> units;
-	};
-
-	inline std::vector<conversion_family> conversion_families
+    class conversion
     {
-        { "Length",
-            {
-                { { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano },
-                { { "µm", "um", "micrometer", "micrometers", "micrometre", "micrometres" }, micro_to_base, base_to_micro },
-                { { "mm", "millimeter", "millimeters", "millimetre", "millimetres" }, milli_to_base, base_to_milli },
-                { { "cm", "centimeter", "centimeters", "centimetre", "centimetres" }, centi_to_base, base_to_centi },
-                { { "dm", "decimeter", "decimeters", "decimetre", "decimetres" }, deci_to_base, base_to_deci },
-                { { "m", "meter", "meters", "metre", "metres" } },
-                { { "km", "kilometer", "kilometers", "kilometre", "kilometres" }, kilo_to_base, base_to_kilo },
-            }
-        },
-        { "Speed",
-            {
-                { { "km/h", "kmh", "kph", "kmph" } },
-                { { "mph", "mi/h" }, multiply<1.609344>, divide<1.609344> },
-                { { "m/s", "mps"}, multiply<3.6>, divide<3.6> },
-                { { "kn", "kt", "knot", "knots"}, multiply<1.852>, divide<1.852> },
-            }
-        },
-        { "Temperature",
-            {
-                { { "°C", "c", "celsius"} },
-                { { "°F", "f", "fahrenheit"}, fahrenheit_to_celsius, celsius_to_fahrenheit },
-                { { "K", "k", "kelvin"}, subtract<273.15>, add<273.15> },
-            }
-        },
-        { "Time",
-            {
-                { { "ns", "nsec", "nsecs", "nanosecond", "nanoseconds" }, nano_to_base, base_to_nano },
-                { { "µs", "us", "usec", "usecs", "microsecond", "microseconds" }, micro_to_base, base_to_micro },
-                { { "ms", "msec", "msecs", "millisecond", "milliseconds" }, milli_to_base, base_to_milli },
-                { { "s", "sec", "secs", "second", "seconds" } },
-                { { "min", "m", "mins", "minute", "minutes" }, multiply<60.0>, divide<60.0> },
-                { { "hr", "h", "hrs", "hour", "hours" }, multiply<3'600.0>, divide<3'600.0> },
-                { { "day(s)", "d", "day", "days"}, multiply<86'400.0>, divide<86'400.0> },
-                { { "solar month(s)", "mo", "month", "months", "smo", "solar month", "solar months" }, multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
-                { { "calendar month(s)", "cmo", "calendar month", "calendar months" }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
-                { { "solar year(s)", "y", "yr", "yrs", "sy", "syr", "syrs", "solar year", "solar years" }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
-                { { "calendar year(s)", "cy", "cyr", "cyrs", "calendar year", "calendar years" }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
-            }
-        },
-    };
+    public:
+        struct error : public std::runtime_error
+        {
+            using std::runtime_error::runtime_error;
+        };
 
-	std::string convert(const std::string& input, const std::string& destination_units, int decimals = -1, bool separate = false, number_t* result_if_single_dest_unit = nullptr);
+        struct unit
+        {
+            std::string display_name;
+            std::vector<std::string> aliases;
+
+            unit_to_base_fn unit_to_base = return_self;
+            base_to_unit_fn base_to_unit = return_self;
+
+            string_to_unit_fn string_to_unit = [name = display_name](const std::string& expression)
+                { return parse_expression_throws(expression, name); };
+            unit_to_string_fn unit_to_string = [name = display_name](number_t unit, int decimals, bool separate)
+                { return format_unit(name, unit, decimals, separate); };
+        };
+
+        struct family
+        {
+            std::string name;
+            std::vector<unit> units;
+        };
+
+        static void convert(const std::string& input, const std::string& destination_units, int decimals = -1, bool separate = false,
+            std::string* result_out = nullptr, std::string* family_name_out = nullptr, number_t* single_dest_result_out = nullptr);
+
+        static bool update_currencies(const nlohmann::json& data);
+    private:
+        static inline std::vector<family> families
+        {
+            { "Length",
+                {
+                    { "nm", { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano},
+                    { "µm", { "um", "micrometer", "micrometers", "micrometre", "micrometres" }, micro_to_base, base_to_micro },
+                    { "mm", { "mm", "millimeter", "millimeters", "millimetre", "millimetres" }, milli_to_base, base_to_milli },
+                    { "cm", { "cm", "centimeter", "centimeters", "centimetre", "centimetres" }, centi_to_base, base_to_centi },
+                    { "dm", { "dm", "decimeter", "decimeters", "decimetre", "decimetres" }, deci_to_base, base_to_deci },
+                    { "m", { "m", "meter", "meters", "metre", "metres" } },
+                    { "km", { "km", "kilometer", "kilometers", "kilometre", "kilometres" }, kilo_to_base, base_to_kilo },
+                }
+            },
+            { "Speed",
+                {
+                    { "km/h", { "km/h", "kmh", "kph", "kmph" } },
+                    { "mph", { "mph", "mi/h" }, multiply<1.609344>, divide<1.609344> },
+                    { "m/s", { "m/s", "mps"}, multiply<3.6>, divide<3.6> },
+                    { "kn", { "kn", "kt", "knot", "knots"}, multiply<1.852>, divide<1.852> },
+                }
+            },
+            { "Temperature",
+                {
+                    { "°C", { "c", "celsius"} },
+                    { "°F", { "f", "fahrenheit"}, fahrenheit_to_celsius, celsius_to_fahrenheit },
+                    { "K", { "k", "kelvin"}, subtract<273.15>, add<273.15> },
+                }
+            },
+            { "Time",
+                {
+                    { "ns", { "ns", "nsec", "nsecs", "nanosecond", "nanoseconds" }, nano_to_base, base_to_nano },
+                    { "µs", { "us", "usec", "usecs", "microsecond", "microseconds" }, micro_to_base, base_to_micro },
+                    { "ms", { "ms", "msec", "msecs", "millisecond", "milliseconds" }, milli_to_base, base_to_milli },
+                    { "sec", { "s", "sec", "secs", "second", "seconds" } },
+                    { "min", { "m", "min", "mins", "minute", "minutes" }, multiply<60.0>, divide<60.0> },
+                    { "hr", { "h", "hr", "hrs", "hour", "hours" }, multiply<3'600.0>, divide<3'600.0> },
+                    { "day(s)", { "day(s)", "d", "day", "days"}, multiply<86'400.0>, divide<86'400.0> },
+                    { "solar month(s)", { "mo", "month", "months", "smo", "solar month", "solar months" }, multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                    { "calendar month(s)", { "cmo", "calendar month", "calendar months" }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
+                    { "solar year(s)", { "y", "yr", "yrs", "sy", "syr", "syrs", "year", "years", "solar year", "solar years" }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                    { "calendar year(s)", { "cy", "cyr", "cyrs", "calendar year", "calendar years" }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
+                }
+            },
+        };
+    public:
+    };
 }

@@ -1,5 +1,7 @@
 #include <fixedphilip/math.h>
 
+#include <fixedphilip/log.h>
+
 #include <tinyexpr.h>
 
 #include <stdexcept>
@@ -9,13 +11,14 @@
 
 namespace fixedphilip::math
 {
-	number_t parse_expression_throws(const std::string& expression)
+	number_t parse_expression_throws(const std::string& expression, const std::string& name)
 	{
 		int error = 0;
 		auto result = te_interp(expression.c_str(), &error);
 		if (error)
 		{
-			throw std::runtime_error(std::format("Failed to parse expression:\n```\n{}\n{}\n```", expression, std::string(error, ' ') + "↑"));
+			// not a conversion error
+			throw std::runtime_error(std::format("Failed to parse expression for unit \"{}\":\n```\n{}\n{}\n```", name, expression, std::string(error, ' ') + "↑"));
 		}
 		return result;
 	}
@@ -32,15 +35,15 @@ namespace fixedphilip::math
 		}
 	}
 
-	std::string convert(const std::string& input, const std::string& destination_units, int decimals, bool separate, number_t* result_if_single_dest_unit)
+	void conversion::convert(const std::string& input, const std::string& destination_units, int decimals, bool separate, std::string* result_out, std::string* family_name_out, number_t* single_dest_result_out)
 	{
 		if (input.empty())
 		{
-			throw std::runtime_error("No input specified");
+			throw fixedphilip::math::conversion::error("No input specified");
 		}
 		if (destination_units.empty())
 		{
-			throw std::runtime_error("No destination units specified");
+			throw fixedphilip::math::conversion::error("No destination units specified");
 		}
 
 		auto input_lower = input;
@@ -52,18 +55,27 @@ namespace fixedphilip::math
 		auto input_splits = fixedphilip::utils::string::split_by_whitespace(input_lower);
 		auto dest_units_splits = fixedphilip::utils::string::split_by_whitespace(dest_units_lower);
 
-		for (auto& conversion_family : conversion_families)
+		struct unit_search_result
 		{
-			struct unit_search_result
-			{
-				conversion_unit* unit;
-				size_t index;
-			};
+			unit* unit;
+			size_t index;
+		};
+		struct all_unit_search_result : public unit_search_result
+		{
+			bool input; // false -> dest_units
+			std::string family;
+
+			all_unit_search_result(conversion::unit* unit, size_t index, const std::string& family, bool input) : unit_search_result(unit, index), family(family), input(input) {}
+		};
+		std::vector<all_unit_search_result> all_results;
+
+		for (auto& family : families)
+		{
 			std::vector<unit_search_result> from_results, to_results;
 
 			int bad_dest_unit_count = 0;
 
-			for (auto& unit : conversion_family.units)
+			for (auto& unit : family.units)
 			{
 				for (auto& alias : unit.aliases)
 				{
@@ -72,6 +84,7 @@ namespace fixedphilip::math
 						if (alias == input_splits[i])
 						{
 							from_results.emplace_back(&unit, i);
+							all_results.emplace_back(&unit, i, family.name, true);
 						}
 					}
 
@@ -79,7 +92,7 @@ namespace fixedphilip::math
 					{
 						if (alias == dest_units_splits[i])
 						{
-							// linearity test
+							// proportionality test
 							constexpr number_t control = 69'420;
 							auto one = 2 * unit.unit_to_base(control) / unit.unit_to_base(control * 2);
 							auto is_one = 0.99 < one && one < 1.01;
@@ -95,6 +108,7 @@ namespace fixedphilip::math
 							}
 
 							to_results.emplace_back(&unit, i);
+							all_results.emplace_back(&unit, i, family.name, false);
 						}
 					}
 				}
@@ -102,7 +116,7 @@ namespace fixedphilip::math
 
 			if (bad_dest_unit_count > 1)
 			{
-				next_family:
+			next_family:
 				continue;
 			}
 
@@ -166,6 +180,9 @@ namespace fixedphilip::math
 			int last_index = 0;
 			for (auto& from_result : from_results)
 			{
+				// formatting input for output (spaces in display name are OK)
+				input_splits[from_result.index] = from_result.unit->display_name;
+
 				std::string input_string = "";
 				bool first_token = true;
 				for (int i = last_index; i < from_result.index; i++)
@@ -192,19 +209,39 @@ namespace fixedphilip::math
 				last_index = from_result.index + 1;
 			}
 
+			// NO MORE THROWS BEYOND THIS POINT
+			if (family_name_out)
+			{
+				*family_name_out = family.name;
+			}
+
+			std::string input_str = "";
+			for (int i = 0; i < input_splits.size(); i++)
+			{
+				if (i > 0)
+				{
+					input_str += " ";
+				}
+				input_str += input_splits[i];
+			}
+
 			if (to_results.size() == 1)
 			{
 				auto result = to_results[0].unit->base_to_unit(result_in_base_units);
-				if (result_if_single_dest_unit)
+				if (result_out)
 				{
-					*result_if_single_dest_unit = result;
+					*result_out = input_str + " = " + to_results[0].unit->unit_to_string(result, decimals, separate);
 				}
-				return "### :repeat: **| " + conversion_family.name + ":**\n> " + input + " = " + to_results[0].unit->unit_to_string(result, decimals, separate);
+				if (single_dest_result_out)
+				{
+					*single_dest_result_out = result;
+				}
+				return;
 			}
 
 			number_t result_in_smallest_units = to_results[to_results.size() - 1].unit->base_to_unit(result_in_base_units);
 
-			std::string result_str = "### :repeat: **| " + conversion_family.name + ":**\n> " + input + " = ";
+			std::string result_str = input_str + " = ";
 			for (int i = 0; i < to_results.size(); i++)
 			{
 				number_t how_many_of_this_unit_are_there_in_last_unit = to_results[to_results.size() - 1].unit->base_to_unit(to_results[i].unit->unit_to_base(1));
@@ -220,8 +257,177 @@ namespace fixedphilip::math
 				}
 				result_str += to_results[i].unit->unit_to_string(result, decimals, separate);
 			}
-			return result_str;
+			if (result_out)
+			{
+				*result_out = result_str;
+			}
+			return;
 		}
-		throw std::runtime_error(std::format("Failed to find a suitable conversion for `{}` to `{}`", input, destination_units));
+
+		if (all_results.empty())
+		{
+			throw fixedphilip::math::conversion::error(std::format("Failed to find a suitable conversion for `{}` to `{}` - no units detected", input, destination_units));
+		}
+		else
+		{
+			std::string error_str = std::format("Failed to find a suitable conversion for `{}` to `{}` - {} unit{} detected:", input, destination_units, all_results.size(), all_results.size() == 1 ? "" : "s");
+			for (auto& result : all_results)
+			{
+				error_str += std::format("\n• {} `{}` (\"{}\", {})", result.input ? "From" : "To", result.input ? input_splits[result.index] : dest_units_splits[result.index], result.unit->display_name, result.family);
+			}
+			throw fixedphilip::math::conversion::error(error_str);
+		}
+	}
+
+	bool conversion::update_currencies(const nlohmann::json& data)
+	{
+		std::string family_name = "";
+		try
+		{
+			std::string date = data.begin().value().at("date");
+			family_name = std::format("Currency ({})", date);
+		}
+		catch (const std::exception& e)
+		{
+			fixedphilip::log::error(std::format("Exception reading date from currency conversion json file: {}", e.what()));
+			return false;
+		}
+		if (family_name.empty() || family_name == "Currency ()")
+		{
+			fixedphilip::log::warning("Currency conversion family name is empty");
+			family_name = "Currency";
+		}
+
+		struct conversion_currency : public fixedphilip::math::conversion::unit
+		{
+			conversion_currency(std::string name, std::string alias, fixedphilip::math::number_t currency_to_one_usd, fixedphilip::math::number_t one_usd_to_currency)
+			{
+				display_name = name;
+				aliases = { alias };
+
+				unit_to_base = [currency_to_one_usd](fixedphilip::math::number_t currency)
+				{
+					return currency * currency_to_one_usd;
+				};
+				base_to_unit = [one_usd_to_currency](fixedphilip::math::number_t usd)
+				{
+					return usd * one_usd_to_currency;
+				};
+			}
+		};
+
+		fixedphilip::math::conversion::family currency_conversion_family
+		{
+			family_name,
+			{
+				conversion_currency { "U.S. Dollar", "usd", 1, 1 },
+			}
+		};
+
+		for (auto& [currency_key, currency_info] : data.items())
+		{
+			std::string name = "";
+			try
+			{
+				name = currency_info.at("code");
+				fixedphilip::utils::string::inplace::to_lowercase(name);
+			}
+			catch (const std::exception& e)
+			{
+				fixedphilip::log::error(std::format("Exception reading 'code' from currency key '{}': {}", currency_key, e.what()));
+				continue;
+			}
+			if (name.empty())
+			{
+				fixedphilip::log::error(std::format("'code' from currency key '{}' is empty", currency_key));
+				continue;
+			}
+
+			std::string pretty_print = "";
+			try
+			{
+				pretty_print = currency_info.at("name");
+			}
+			catch (const std::exception& e)
+			{
+				fixedphilip::log::error(std::format("Exception reading 'name' from currency key '{}': {}", currency_key, e.what()));
+				continue;
+			}
+			if (pretty_print.empty())
+			{
+				fixedphilip::log::error(std::format("'name' from currency key '{}' is empty", currency_key));
+				continue;
+			}
+
+			std::string currency_to_usd_str = "";
+			try
+			{
+				currency_to_usd_str = currency_info.at("inverseRate");
+			}
+			catch (const std::exception& e)
+			{
+				fixedphilip::log::error(std::format("Exception reading 'inverseRate' from currency key '{}': {}", currency_key, e.what()));
+				continue;
+			}
+			if (currency_to_usd_str.empty())
+			{
+				fixedphilip::log::error(std::format("'inverseRate' from currency key '{}' is empty", currency_key));
+				continue;
+			}
+
+			fixedphilip::math::number_t currency_to_usd = -1;
+			try
+			{
+				currency_to_usd = fixedphilip::math::string_to_number(currency_to_usd_str);
+			}
+			catch (const std::exception& e)
+			{
+				fixedphilip::log::error(std::format("Exception parsing 'currency_to_usd' for currency key '{}': {}", currency_key, e.what()));
+				continue;
+			}
+			if (currency_to_usd < -1)
+			{
+				fixedphilip::log::error(std::format("'currency_to_usd' for currency key '{}' is negative", currency_key));
+				continue;
+			}
+
+			std::string usd_to_currency_str = "";
+			try
+			{
+				usd_to_currency_str = currency_info.at("rate");
+			}
+			catch (const std::exception& e)
+			{
+				fixedphilip::log::error(std::format("Exception reading 'rate' from currency key '{}': {}", currency_key, e.what()));
+				continue;
+			}
+			if (usd_to_currency_str.empty())
+			{
+				fixedphilip::log::error(std::format("'rate' from currency key '{}' is empty", currency_key));
+				continue;
+			}
+
+			fixedphilip::math::number_t usd_to_currency = -1;
+			try
+			{
+				usd_to_currency = fixedphilip::math::string_to_number(usd_to_currency_str);
+			}
+			catch (const std::exception& e)
+			{
+				fixedphilip::log::error(std::format("Exception parsing 'usd_to_currency' for currency key '{}': {}", currency_key, e.what()));
+				continue;
+			}
+			if (usd_to_currency < -1)
+			{
+				fixedphilip::log::error(std::format("'usd_to_currency' for currency key '{}' is negative", currency_key));
+				continue;
+			}
+
+			currency_conversion_family.units.push_back(conversion_currency{ pretty_print, name, currency_to_usd, usd_to_currency });
+		}
+
+		std::erase_if(fixedphilip::math::conversion::families, [](const auto& item) { return item.name.starts_with("Currency"); });
+		fixedphilip::math::conversion::families.push_back(currency_conversion_family);
+		return true;
 	}
 }
