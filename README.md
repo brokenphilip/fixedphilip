@@ -3,9 +3,7 @@
 
 > *"when is brokenphilip getting fixed?!" -several concerned internet residents*
 
-fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library.
-
-fixedphilip is designed to support both modern slash-commands (guild and user installs), as well as old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
+fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library. The bot aims to provide a convenient set of features for everyday use, primarily ones not found in (or executed better than) other Discord bots. It is designed to support both modern slash-commands (for guild/server and user installs), as well as optional old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
 
 Some of fixedphilip's most notable features include:
 - Detailed `/status` command with uptime, statistics, machine resource usage* and other info
