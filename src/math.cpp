@@ -300,9 +300,9 @@ namespace fixedphilip::math
 
 		struct conversion_currency : public fixedphilip::math::conversion::unit
 		{
-			conversion_currency(std::string name, std::string alias, fixedphilip::math::number_t currency_to_one_usd, fixedphilip::math::number_t one_usd_to_currency)
+			conversion_currency(std::string full_name, std::string alias, fixedphilip::math::number_t currency_to_one_usd, fixedphilip::math::number_t one_usd_to_currency)
 			{
-				display_name = name;
+				display_name = full_name;
 				aliases = { alias };
 
 				unit_to_base = [currency_to_one_usd](fixedphilip::math::number_t currency)
@@ -313,6 +313,11 @@ namespace fixedphilip::math
 				{
 					return usd * one_usd_to_currency;
 				};
+
+				string_to_unit = [name = display_name](const std::string& expression)
+					{ return parse_expression_throws(expression, name); };
+				unit_to_string = [name = display_name](number_t unit, int decimals, bool separate)
+					{ return format_unit(name, unit, decimals, separate); };
 			}
 		};
 

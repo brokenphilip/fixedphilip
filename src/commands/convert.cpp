@@ -30,7 +30,7 @@ namespace fixedphilip::commands::convert
         auto thinking = event.co_thinking_start();
 
         static auto next_call = std::chrono::minutes(1);
-        if (false && fixedphilip::utils::time::run_if_passed<struct fetch_currency_json>(next_call))
+        if (fixedphilip::utils::time::run_if_passed<struct fetch_currency_json>(next_call))
         {
             auto request = co_await bot.cluster().co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
             if (request.error != dpp::h_success)
