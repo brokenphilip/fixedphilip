@@ -11,6 +11,44 @@
 
 namespace fixedphilip::math
 {
+	std::string thousands_separator::format_number(number_t number, int decimals)
+	{
+		std::locale custom_loc(std::locale::classic(), new thousands_separator);
+		std::string result_str;
+		if (decimals < 0)
+		{
+			result_str = std::format(custom_loc, "{:L}", number);
+		}
+		else
+		{
+			// oh my fucking god whatever already
+			std::string number_str = std::format("{:.{}f}", number, decimals);
+			result_str = std::format(custom_loc, "{:L}", string_to_number(number_str));
+		}
+		return result_str;
+	}
+
+	std::string format_number(number_t number, int decimals, bool separate)
+	{
+		std::string result_str;
+		if (separate)
+		{
+			result_str = fixedphilip::math::thousands_separator::format_number(number, decimals);
+		}
+		else
+		{
+			if (decimals < 0)
+			{
+				result_str = std::format("{}", number);
+			}
+			else
+			{
+				result_str = std::format("{:.{}f}", number, decimals);
+			}
+		}
+		return result_str;
+	}
+
 	number_t parse_expression_throws(const std::string& expression, const std::string& name)
 	{
 		int error = 0;
@@ -21,18 +59,6 @@ namespace fixedphilip::math
 			throw std::runtime_error(std::format("Failed to parse expression for unit \"{}\":\n```\n{}\n{}\n```", name, expression, std::string(error, ' ') + "↑"));
 		}
 		return result;
-	}
-
-	std::string format_unit(const std::string& name, number_t value, int decimals, bool separate)
-	{
-		if (decimals < 0)
-		{
-			return std::format("{} {}", value, name);
-		}
-		else
-		{
-			return std::format("{:.{}f} {}", value, decimals, name);
-		}
 	}
 
 	void conversion::convert(const std::string& input, const std::string& destination_units, int decimals, bool separate, std::string* result_out, std::string* family_name_out, number_t* single_dest_result_out)
@@ -317,7 +343,7 @@ namespace fixedphilip::math
 				string_to_unit = [name = display_name](const std::string& expression)
 					{ return parse_expression_throws(expression, name); };
 				unit_to_string = [name = display_name](number_t unit, int decimals, bool separate)
-					{ return format_unit(name, unit, decimals, separate); };
+					{ return format_number(unit, decimals, separate) + " " + name; };
 			}
 		};
 

@@ -1,4 +1,5 @@
 #include <fixedphilip/command.h>
+#include <fixedphilip/math.h>
 
 #include <tinyexpr.h>
 
@@ -11,7 +12,7 @@ namespace fixedphilip::commands::calculate
             .add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (use -1 (default) for automatic)")
                 .set_min_value(-1)
                 .set_max_value(std::numeric_limits<double>::max_digits10))
-            .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (false by default)"));
+            .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
         co_return true;
     }
@@ -31,7 +32,7 @@ namespace fixedphilip::commands::calculate
         {
             auto expression = std::get<std::string>(slash_command->get_parameter("expression"));
             auto decimals = fixedphilip::discord::try_get_command_parameter<int64_t>(*slash_command, "decimals", -1);
-            auto separate = fixedphilip::discord::try_get_command_parameter<bool>(*slash_command, "separate", false);
+            auto separate = fixedphilip::discord::try_get_command_parameter<bool>(*slash_command, "separate", true);
 
             int error = 0;
             auto result = te_interp(expression.c_str(), &error);
@@ -42,15 +43,8 @@ namespace fixedphilip::commands::calculate
             }
             else
             {
-                std::string result_str;
-                if (decimals < 0)
-                {
-                    result_str = std::format("{}", result);
-                }
-                else
-                {
-                    result_str = std::format("{:.{}f}", result, decimals);
-                }
+                std::string result_str = fixedphilip::math::format_number(result, decimals, separate);
+
                 co_await thinking;
                 event.thinking_end(std::format("### :abacus: **| Result:**\n> {} = **{}** (DEBUG: separate = {})", expression, result_str, separate));
             }

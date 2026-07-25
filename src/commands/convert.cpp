@@ -14,7 +14,7 @@ namespace fixedphilip::commands::convert
             .add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (use -1 (default) for automatic)")
                 .set_min_value(-1)
                 .set_max_value(std::numeric_limits<double>::max_digits10))
-            .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (false by default)"));
+            .add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
         co_return true;
     }
@@ -75,7 +75,7 @@ namespace fixedphilip::commands::convert
             auto value = std::get<std::string>(slash_command->get_parameter("value"));
             auto to = std::get<std::string>(slash_command->get_parameter("to"));
             auto decimals = fixedphilip::discord::try_get_command_parameter<int64_t>(*slash_command, "decimals", -1);
-            auto separate = fixedphilip::discord::try_get_command_parameter<bool>(*slash_command, "separate", false);
+            auto separate = fixedphilip::discord::try_get_command_parameter<bool>(*slash_command, "separate", true);
             try
             {
                 std::string result, family;

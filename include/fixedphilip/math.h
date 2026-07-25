@@ -6,12 +6,23 @@
 #include <dpp/nlohmann/json.hpp>
 
 #include <functional>
+#include <locale>
 
 namespace fixedphilip::math
 {
 	using number_t = double;
 	using conversion_fn = std::function<number_t(number_t)>;
     inline number_t string_to_number(const std::string& str) { return std::stod(str); }
+
+    struct thousands_separator : std::numpunct<char>
+    {
+        inline char do_thousands_sep() const override { return ' '; }
+        inline std::string do_grouping() const override { return "\3"; }
+
+        static std::string format_number(number_t number, int decimals = -1);
+    };
+
+    std::string format_number(number_t number, int decimals = -1, bool separate = false);
 
 	// (string ->) unit -> base -> unit (-> string)
 	using string_to_unit_fn = std::function<number_t(const std::string& str)>;
@@ -90,7 +101,6 @@ namespace fixedphilip::math
 
 	number_t parse_expression_throws(const std::string& expression, const std::string& name);
 	inline number_t return_self(number_t self) { return self; }
-	std::string format_unit(const std::string& name, number_t value, int decimals, bool separate);
 
     class conversion
     {
@@ -111,7 +121,7 @@ namespace fixedphilip::math
             string_to_unit_fn string_to_unit = [name = display_name](const std::string& expression)
                 { return parse_expression_throws(expression, name); };
             unit_to_string_fn unit_to_string = [name = display_name](number_t unit, int decimals, bool separate)
-                { return format_unit(name, unit, decimals, separate); };
+                { return format_number(unit, decimals, separate) + " " + name; };
         };
 
         struct family
