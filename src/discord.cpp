@@ -1,6 +1,5 @@
 #include <fixedphilip/discord.h>
 
-#include <fixedphilip/command.h>
 #include <fixedphilip/build.h>
 
 #include <fixedphilip/utils/string.h>
@@ -10,15 +9,15 @@ namespace fixedphilip::discord
 {
     nlohmann::json bot::config::struct_to_json()
     {
-        if (activity_type == dpp::at_custom)
+        if (settings.activity_type == dpp::at_custom)
         {
             return
             {
                 { "token", token },
-                { "prefix", prefix },
-                { "presence_status", status_to_string.at(presence_status) },
-                { "presence_activity", presence_activity },
-                { "presence_update_rate_mins", presence_update_rate_mins },
+                { "prefix", settings.prefix },
+                { "presence_status", status_to_string.at(settings.presence_status) },
+                { "presence_activity", settings.presence_activity },
+                { "presence_update_rate_mins", settings.presence_update_rate_mins },
             };
         }
         else
@@ -26,10 +25,10 @@ namespace fixedphilip::discord
             return
             {
                 { "token", token },
-                { "prefix", prefix },
-                { "presence_status", status_to_string.at(presence_status) },
-                { "presence_activity", activity_to_string.at(activity_type) + presence_activity },
-                { "presence_update_rate_mins", presence_update_rate_mins },
+                { "prefix", settings.prefix },
+                { "presence_status", status_to_string.at(settings.presence_status) },
+                { "presence_activity", activity_to_string.at(settings.activity_type) + settings.presence_activity },
+                { "presence_update_rate_mins", settings.presence_update_rate_mins },
             };
         }
     }
@@ -37,7 +36,7 @@ namespace fixedphilip::discord
     bool bot::config::json_to_struct(const nlohmann::json& data)
     {
         try_at(data, "token", token);
-        try_at(data, "prefix", prefix);
+        try_at(data, "prefix", settings.prefix);
 
         std::string presence_status_string;
         if (try_at(data, "presence_status", presence_status_string))
@@ -52,7 +51,7 @@ namespace fixedphilip::discord
             }
             else
             {
-                presence_status = it->first;
+                settings.presence_status = it->first;
             }
         }
 
@@ -66,21 +65,21 @@ namespace fixedphilip::discord
             if (it == activity_to_string.end())
             {
                 // no special activity prefix, assume custom status
-                activity_type = dpp::at_custom;
-                presence_activity = presence_activity_string;
+                settings.activity_type = dpp::at_custom;
+                settings.presence_activity = presence_activity_string;
             }
             else
             {
                 // special activity prefix found, assign activity and remove the prefix accordingly
-                activity_type = it->first;
-                presence_activity = presence_activity_string.substr(it->second.length());
+                settings.activity_type = it->first;
+                settings.presence_activity = presence_activity_string.substr(it->second.length());
             }
         }
 
-        if (try_at(data, "presence_update_rate_mins", presence_update_rate_mins) && presence_update_rate_mins < 0)
+        if (try_at(data, "presence_update_rate_mins", settings.presence_update_rate_mins) && settings.presence_update_rate_mins < 0)
         {
             fixedphilip::log::error("'presence_update_rate_mins' is out of bounds - reverting to default");
-            presence_update_rate_mins = 5;
+            settings.presence_update_rate_mins = 5;
         }
 
         // partial load is fine
@@ -116,22 +115,23 @@ namespace fixedphilip::discord
             return false;
         }
 
-        if (prefix.empty())
+        if (settings.prefix.empty())
         {
             fixedphilip::log::info("Old-style commands disabled (prefix is blank)");
         }
         else
         {
-            fixedphilip::log::info(std::format("Global prefix for old-style commands set to '{}'", prefix));
+            fixedphilip::log::info(std::format("Global prefix for old-style commands set to '{}'", settings.prefix));
         }
         return true;
     }
 
-    dpp::task<void> bot::on_message_create(const dpp::message_create_t& event)
+    dpp::task<void> bot::message_create_event(const dpp::message_create_t& event)
     {
-        if (!instance_)
+        auto cluster = static_cast<bot*>(event.owner);
+        if (!cluster)
         {
-            fixedphilip::log::error("on_message_create: bot was null");
+            fixedphilip::log::error("message_create_event: cluster was null");
             co_return;
         }
 
@@ -141,91 +141,91 @@ namespace fixedphilip::discord
             co_return;
         }
 
-        auto& prefix = instance_->config_.prefix;
+        std::string prefix = "";
+        {
+            std::shared_lock _(cluster->settings_mutex_);
+            prefix = cluster->settings_.prefix;
+        }
         if (!prefix.empty())
         {
-            auto iter = fixedphilip::command::first();
-            while (iter)
+            for (auto& module_command : cluster->module_commands)
             {
-                auto command = std::format("{}{}", prefix, iter->name());
+                auto command = std::format("{}{}", prefix, module_command.name);
 
                 // old-style prefix commands - discouraged by Discord, but still convenient to have
                 if (event.msg.content == command || event.msg.content.starts_with(command + " "))
                 {
-                    co_await iter->run(fixedphilip::command::run_event(event), *instance_);
+                    co_await module_command.run(fixedphilip::discord::bot::command::run_event(event));
                     co_return;
                 }
-                iter = iter->next();
             }
         }
     }
 
-    dpp::task<void> bot::on_ready(const dpp::ready_t& event)
+    dpp::task<void> bot::ready_event(const dpp::ready_t& event)
     {
-        if (dpp::run_once<struct on_ready_init>())
+        if (dpp::run_once<struct ready_event_init>())
         {
-            if (!instance_)
+            auto cluster = static_cast<bot*>(event.owner);
+            if (!cluster)
             {
-                fixedphilip::log::error("on_ready_init: bot was null");
+                fixedphilip::log::error("ready_event_init: cluster was null");
                 co_return;
             }
-            fixedphilip::log::info("Connected and logged in as: " + instance_->cluster().me.format_username());
-            co_await instance_->init_commands();
-            co_await instance_->init_presence();
+            cluster->log(dpp::ll_info, "Connected and logged in as: " + cluster->me.format_username());
+            co_await cluster->init_commands();
+            //co_await cluster->init_presence();
         }
     }
 
-    dpp::task<void> bot::on_slashcommand(const dpp::slashcommand_t& event)
+    dpp::task<void> bot::log_event(const dpp::log_t& event)
     {
-        if (!instance_)
-        {
-            fixedphilip::log::error(std::format("on_slashcommand ({}): bot was null", event.command.get_command_name()));
-            co_return;
-        }
+        // line 195 of cluster.cpp doesn't seem correct... 		dpp::log_t logmsg(nullptr, 0, msg); - why pass nullptr/0 ?! ?! ?!
+        fixedphilip::log::implementation(
+            event.severity, 
+            //std::format("Cl: {}, Sh: {}", 
+            //    event.owner ? std::to_string(event.owner->cluster_id) : "N/A", 
+            //    event.shard), 
+            "",
+            event.message);
 
-        auto iter = fixedphilip::command::first();
-        while (iter)
-        {
-            if (event.command.get_command_name() == iter->name())
-            {
-                co_await iter->run(fixedphilip::command::run_event(event), *instance_);
-                co_return;
-            }
-            iter = iter->next();
-        }
+        co_return;
     }
 
     dpp::task<void> bot::init_commands()
     {
-        int total_commands = 0;
+        std::vector<dpp::slashcommand> slash_commands;
 
-        std::vector<dpp::slashcommand> commands;
-        auto iter = fixedphilip::command::first();
+        auto iter = fixedphilip::discord::bot::module::first();
         while (iter)
         {
-            total_commands++;
-            auto name = iter->name();
-            dpp::slashcommand command(name, iter->description(), cluster_.me.id);
-
-            // we want to guarantee that commands are initialized in-order, so we co_await their init
-            // not to mention "command" can be a dangling reference if "commands" goes out-of-scope and gets destroyed
-            auto success = co_await iter->init(command, *this);
-            if (success)
+            auto iter_commands = iter->commands();
+            for (auto& slash_command : iter_commands)
             {
-                commands.push_back(std::move(command));
+                slash_commands.push_back(slash_command);
             }
-            iter = iter->next();
+            module_commands.insert(module_commands.end(), iter_commands.begin(), iter_commands.end());
         }
 
-        auto result = co_await cluster_.co_global_bulk_command_create(commands);
+        auto result = co_await co_global_bulk_command_create(slash_commands);
         if (auto command_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("init_commands, co_global_bulk_command_create", result))
         {
-            auto result_log = std::format("Registered {} (out of {}) command{}", command_map->size(), total_commands, command_map->size() == 1 ? "" : "s");
+            auto result_log = std::format("Registered {} command{}", command_map->size(), command_map->size() == 1 ? "" : "s");
 
             bool first_command = true;
             for (const auto& [snowflake, command] : *command_map)
             {
-                slash_command_snowflakes_[command.name] = snowflake;
+                for (auto& module_command : module_commands)
+                {
+                    if (module_command.name == command.name)
+                    {
+                        register_command(command.name, [run_fn = module_command.get_run_fn()](const dpp::slashcommand_t& event) -> dpp::task<void>
+                        {
+                            co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                        });
+                    }
+                }
+                slash_command_snowflakes[command.name] = snowflake;
                 if (first_command)
                 {
                     result_log += ": '" + command.name + "'";
@@ -236,10 +236,140 @@ namespace fixedphilip::discord
                 }
                 first_command = false;
             }
-            fixedphilip::log::info(result_log);
+            log(dpp::ll_info, result_log);
         }
     }
 
+    const dpp::event_dispatch_t& bot::command::run_event::event_dispatch() const
+    {
+        return std::visit([](auto& event_dispatch) -> const dpp::event_dispatch_t&
+        {
+            return event_dispatch;
+        },
+        *this);
+    }
+
+    void bot::command::run_event::reply(const dpp::message& msg, dpp::command_completion_event_t callback) const
+    {
+        if (auto slash_command = get_slash_command())
+        {
+            slash_command->reply(msg, callback);
+            return;
+        }
+        else if (auto message_create = get_message_create())
+        {
+            message_create->reply(msg, false, callback);
+            return;
+        }
+    }
+
+    dpp::async<dpp::confirmation_callback_t> bot::command::run_event::co_reply(const dpp::message& msg) const
+    {
+        if (auto slash_command = get_slash_command())
+        {
+            return slash_command->co_reply(msg);
+        }
+        else if (auto message_create = get_message_create())
+        {
+            return message_create->co_reply(msg);
+        }
+        return {}; // C4715, unreachable
+    }
+
+    void bot::command::run_event::thinking_start() const
+    {
+        if (auto slash_command = get_slash_command())
+        {
+            slash_command->thinking();
+            return;
+        }
+        else if (auto message_create = get_message_create())
+        {
+            message_create->owner->channel_typing(message_create->msg.channel_id);
+            return;
+        }
+    }
+
+    dpp::async<dpp::confirmation_callback_t> bot::command::run_event::co_thinking_start() const
+    {
+        if (auto slash_command = get_slash_command())
+        {
+            return slash_command->co_thinking();
+        }
+        else if (auto message_create = get_message_create())
+        {
+            return message_create->owner->co_channel_typing(message_create->msg.channel_id);
+        }
+        return {}; // C4715, unreachable
+    }
+
+    void bot::command::run_event::thinking_end(const dpp::message& msg, dpp::command_completion_event_t callback) const
+    {
+        if (auto slash_command = get_slash_command())
+        {
+            slash_command->edit_original_response(msg, callback);
+            return;
+        }
+        else if (auto message_create = get_message_create())
+        {
+            message_create->reply(msg, false, callback);
+            return;
+        }
+    }
+
+    void bot::command::run_event::reply_not_impl_use_other() const
+    {
+        auto cluster = std::visit([](auto& event_dispatch)
+        {
+            return static_cast<bot*>(event_dispatch.owner);
+        },
+        *this);
+
+        if (!cluster)
+        {
+            fixedphilip::log::error("reply_not_impl_use_other: cluster was null");
+            reply(":warning: **| Not implemented.");
+            return;
+        }
+
+        std::string command_text;
+        if (auto slash_command = get_slash_command())
+        {
+            std::string prefix = "";
+            {
+                std::shared_lock _(cluster->settings_mutex_);
+                prefix = cluster->settings_.prefix;
+            }
+            if (prefix.empty())
+            {
+                reply(":warning: **| Not implemented.");
+                return;
+            }
+            command_text = "`" + prefix + slash_command->command.get_command_name() + "`";
+        }
+        else if (auto message_create = get_message_create())
+        {
+            std::string prefix = "";
+            {
+                std::shared_lock _(cluster->settings_mutex_);
+                prefix = cluster->settings_.prefix;
+            }
+            auto name = message_create->msg.content.substr(prefix.length());
+            auto snowflake = cluster->slash_command_snowflake(name);
+            if (snowflake == dpp::snowflake(0))
+            {
+                fixedphilip::log::error("Failed to find snowflake for command " + name);
+                command_text = "`/" + name + "`";
+            }
+            else
+            {
+                command_text = dpp::utility::slashcommand_mention(snowflake, name);
+            }
+        }
+        reply(std::format(":warning: **| Not implemented, use {} instead.**", command_text));
+    }
+
+    /*
     dpp::task<void> bot::init_presence()
     {
         update_presence();
@@ -276,31 +406,31 @@ namespace fixedphilip::discord
         }
         cluster_.set_presence(dpp::presence(instance_->config_.presence_status, instance_->config_.activity_type, presence_string));
     }
-
+    */
     void bot::fetch_app_info_async()
     {
         // as this function's name implies, the lambda will run asynchronously(!!!) and NOT when this function is called
         // it CAN'T be run synchronously - if we block the thread, the REST API request queue NEVER gets serviced !!!
-        cluster_.current_application_get([](const dpp::confirmation_callback_t& result) -> dpp::task<void>
+        current_application_get([](const dpp::confirmation_callback_t& result) -> dpp::task<void>
         {
-            if (!instance_)
-            {
-                fixedphilip::log::error("fetch_app_info_async: bot was null");
-                co_return;
-            }
-
             if (auto app = fixedphilip::discord::get_if<dpp::application>("fetch_app_info_async, current_application_get", result))
             {
-                auto& cluster = instance_->cluster_;
+                // HACK: you can't really do any of this safely anyways, might as well cast away the const
+                auto cluster = const_cast<dpp::cluster*>(result.bot);
+                if (!cluster)
+                {
+                    fixedphilip::log::error("fetch_app_info_async, current_application_get: bot was null");
+                    co_return;
+                }
 
                 auto& app_owner = app->owner;
-                instance_->app_owner_ = app_owner;
-                fixedphilip::log::info("Instance owner is: " + app_owner.username);
+                static_cast<bot*>(cluster)->app_owner_ = app_owner;
+                cluster->log(dpp::loglevel::ll_info, "Instance owner is: " + app_owner.username);
 
                 // check for any privileged intents - if we don't have permission to use them, disable them
                 uint32_t intents_to_disable = 0;
 
-                if (!(app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members)))
+                if (!(app->flags & (dpp::apf_gateway_guild_members_limited | dpp::apf_gateway_guild_members)) && ((cluster->intents & dpp::i_guild_members) != 0))
                 {
                     fixedphilip::log::warning
                     (
@@ -313,7 +443,18 @@ namespace fixedphilip::discord
                     intents_to_disable |= dpp::i_guild_members;
                 }
 
-                if (!(app->flags & (dpp::apf_gateway_message_content_limited | dpp::apf_gateway_message_content)))
+                if (!(app->flags & (dpp::apf_gateway_presence_limited | dpp::apf_gateway_presence)) && ((cluster->intents & dpp::i_guild_presences) != 0))
+                {
+                    fixedphilip::log::warning
+                    (
+                        "The 'Guild Presences' privileged intent is not enabled for this application. "
+                        "Features that require user presence (status, activities) updates will not work for this session. "
+                        "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
+                    );
+                    intents_to_disable |= dpp::i_guild_presences;
+                }
+
+                if (!(app->flags & (dpp::apf_gateway_message_content_limited | dpp::apf_gateway_message_content)) && ((cluster->intents & dpp::i_message_content) != 0))
                 {
                     fixedphilip::log::warning
                     (
@@ -326,17 +467,18 @@ namespace fixedphilip::discord
                 }
                 else
                 {
-                    cluster.on_message_create(on_message_create);
+                    cluster->on_message_create.attach(message_create_event);
                 }
 
+                // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
+                // we don't need to reconnect them manually - they'll automatically reconnect anyways
+                // or, if we manage to update the intent before the initial connection, there won't be a need for a reconnect
                 if (intents_to_disable)
                 {
-                    cluster.intents &= ~intents_to_disable;
+                    cluster->intents &= ~intents_to_disable;
 
-                    // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
-                    // we don't need to reconnect them manually - they'll automatically reconnect anyways
-                    // or, if we manage to update the intent before the initial connection, there won't be a need for a reconnect
-                    for (auto& shard : cluster.get_shards())
+                    // HACK: ideally we'd use a unique_lock for the cluster's shards_mutex, but it is inaccessible (private)
+                    for (auto& shard : cluster->get_shards())
                     {
                         auto client = shard.second;
                         if (client)
@@ -349,28 +491,53 @@ namespace fixedphilip::discord
         });
     }
 
-    void bot::register_events()
+    bot::bot(const std::string& token, const settings& settings, uint32_t intents, uint32_t shards, uint32_t cluster_id, 
+        uint32_t maxclusters, bool compressed, dpp::cache_policy_t policy, uint32_t pool_threads) 
+        : dpp::cluster(token, intents, shards, cluster_id, maxclusters, compressed, policy, pool_threads)
     {
-        cluster_.on_log(dpp::utility::cout_logger());
-        // on_message_create is registered on demand by fetch_app_info_async
-        cluster_.on_slashcommand(on_slashcommand);
-        cluster_.on_ready(on_ready);
-    }
+        // attach our own events first (modules do it in their inits)
+        on_log.attach(log_event);
+        on_ready.attach(ready_event);
+        // message_create_event is attached to on_message_create in fetch_app_info_async
 
-    bot::bot(const config& config) : config_(config), cluster_(config.token, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members)
-    {
-        if (instance_)
-        {
-            throw std::logic_error("An instance of fixedphilip::discord::bot already exists - multiple instances are not allowed");
-        }
-        instance_ = this;
-    }
-
-    bool bot::setup()
-    {
         fetch_app_info_async();
-        register_events();
-        return true;
+
+        // initialize modules alphabetically by their name
+        auto iter = fixedphilip::discord::bot::module::first();
+        while (iter)
+        {
+            if (iter->init(*this))
+            {
+                loaded_modules.push_back(iter);
+            }
+            iter = iter->next();
+        }
+    }
+
+    bot::~bot()
+    {
+        // destroy loaded modules in reverse order of initialization
+        auto iter = fixedphilip::discord::bot::module::last();
+        while (iter)
+        {
+            if (loaded_modules.empty())
+            {
+                return;
+            }
+            auto last_loaded_module = loaded_modules.back();
+            if (iter == last_loaded_module)
+            {
+                loaded_modules.pop_back();
+                iter->destroy(*this);
+            }
+            iter = iter->previous();
+        }
+
+        // todo race cond?
+        for (auto& module_command : module_commands)
+        {
+            unregister_command(module_command.name);
+        }
     }
 
     dpp::task<bot::counts> bot::co_get_counts()
@@ -429,7 +596,7 @@ namespace fixedphilip::discord
         static auto next_call = std::chrono::minutes(1);
         if (fixedphilip::utils::time::run_if_passed<struct fetch_app_data>(next_call))
         {
-            auto result = co_await cluster_.co_current_application_get();
+            auto result = co_await co_current_application_get();
             if (auto app = fixedphilip::discord::get_if<dpp::application>("co_get_counts, co_current_application_get", result))
             {
                 // these update daily, so one hour is generous enough

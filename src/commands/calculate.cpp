@@ -52,4 +52,4 @@ namespace fixedphilip::commands::calculate
     }
 }
 
-FIXEDPHILIP_COMMAND(calculate, "Calculate a math expression");
+//FIXEDPHILIP_COMMAND(calculate, "Calculate a math expression");

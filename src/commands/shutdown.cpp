@@ -36,4 +36,4 @@ namespace fixedphilip::commands::shutdown
     }
 }
 
-FIXEDPHILIP_COMMAND(shutdown, "Shuts the bot down");
+//FIXEDPHILIP_COMMAND(shutdown, "Shuts the bot down");

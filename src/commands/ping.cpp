@@ -14,4 +14,4 @@ namespace fixedphilip::commands::ping
     }
 }
 
-FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST latency");
+//FIXEDPHILIP_COMMAND(ping, "Ping-pong test with REST latency");

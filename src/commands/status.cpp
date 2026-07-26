@@ -80,4 +80,4 @@ namespace fixedphilip::commands::status
     }
 }
 
-FIXEDPHILIP_COMMAND(status, "Check bot status");
+//FIXEDPHILIP_COMMAND(status, "Check bot status");

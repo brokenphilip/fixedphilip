@@ -2,31 +2,52 @@
 
 #include <iostream> // std::cout
 
-#include <dpp/misc-enum.h> // dpp::loglevel
+
 #include <dpp/utility.h> // dpp::utility::*
 
 namespace fixedphilip::log
 {
-	void dpp_cout_log(dpp::loglevel severity, const std::string& message)
+	void implementation(dpp::loglevel ll, const std::string& prefix, const std::string& message)
 	{
-		if (severity > dpp::ll_trace)
+		if (ll == dpp::ll_trace)
 		{
-			std::cout << "[" << dpp::utility::current_date_time() << "] " << dpp::utility::loglevel(severity) << ": " << message << "\n";
+			return;
 		}
+		std::cout << "[" << dpp::utility::current_date_time() << "] ";
+		if (!prefix.empty())
+		{
+			std::cout << "(" << prefix << ") ";
+		}
+		std::cout << dpp::utility::loglevel(ll) << ": " << message << std::endl;
+	}
+
+	void trace(const std::string& message)
+	{
+		implementation(dpp::loglevel::ll_trace, "", message);
+	}
+
+	void debug(const std::string& message)
+	{
+		implementation(dpp::loglevel::ll_debug, "", message);
 	}
 
 	void info(const std::string& message)
 	{
-		dpp_cout_log(dpp::loglevel::ll_info, message);
+		implementation(dpp::loglevel::ll_info, "", message);
 	}
 
 	void warning(const std::string& message)
 	{
-		dpp_cout_log(dpp::loglevel::ll_warning, message);
+		implementation(dpp::loglevel::ll_warning, "", message);
 	}
 
 	void error(const std::string& message)
 	{
-		dpp_cout_log(dpp::loglevel::ll_error, message);
+		implementation(dpp::loglevel::ll_error, "", message);
+	}
+
+	void critical(const std::string& message)
+	{
+		implementation(dpp::loglevel::ll_critical, "", message);
 	}
 }

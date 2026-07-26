@@ -5,9 +5,9 @@
 
 int main()
 {
-#ifdef __linux__
-    setlinebuf(stdout);
-#endif
+//#ifdef __linux__
+//    setlinebuf(stdout);
+//#endif
     fixedphilip::log::info("==============================");
     fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
     fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
@@ -21,13 +21,8 @@ int main()
             fixedphilip::log::error("Bot configuration failed - shutting down...");
             return 1;
         }
-        fixedphilip::discord::bot bot(bot_config);
-        if (!bot.setup())
-        {
-            fixedphilip::log::error("Bot setup failed - shutting down...");
-            return 1;
-        }
-        bot.run_blocking();
+        fixedphilip::discord::bot bot(bot_config.token, bot_config.settings, dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members);
+        bot.start();
     }
 
     fixedphilip::log::info("Bot terminated - shutting down...");

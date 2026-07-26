@@ -108,4 +108,4 @@ namespace fixedphilip::commands::convert
     }
 }
 
-FIXEDPHILIP_COMMAND(convert, "Unit/currency conversion");
+//FIXEDPHILIP_COMMAND(convert, "Unit/currency conversion");
