@@ -9,78 +9,17 @@ namespace fixedphilip::discord
 {
     nlohmann::json bot::config::struct_to_json()
     {
-        if (settings.activity_type == dpp::at_custom)
+        return
         {
-            return
-            {
-                { "token", token },
-                { "prefix", settings.prefix },
-                { "presence_status", status_to_string.at(settings.presence_status) },
-                { "presence_activity", settings.presence_activity },
-                { "presence_update_rate_mins", settings.presence_update_rate_mins },
-            };
-        }
-        else
-        {
-            return
-            {
-                { "token", token },
-                { "prefix", settings.prefix },
-                { "presence_status", status_to_string.at(settings.presence_status) },
-                { "presence_activity", activity_to_string.at(settings.activity_type) + settings.presence_activity },
-                { "presence_update_rate_mins", settings.presence_update_rate_mins },
-            };
-        }
+            { "token", token },
+            { "prefix", settings.prefix },
+        };
     }
 
     bool bot::config::json_to_struct(const nlohmann::json& data)
     {
         try_at(data, "token", token);
         try_at(data, "prefix", settings.prefix);
-
-        std::string presence_status_string;
-        if (try_at(data, "presence_status", presence_status_string))
-        {
-            auto it = std::find_if(status_to_string.begin(), status_to_string.end(), [&presence_status_string](const auto& pair)
-            {
-                return pair.second == presence_status_string;
-            });
-            if (it == status_to_string.end())
-            {
-                fixedphilip::log::error("invalid 'presence_status' (reverting to default) - must be either one of: offline, online, dnd, idle, invisible");
-            }
-            else
-            {
-                settings.presence_status = it->first;
-            }
-        }
-
-        std::string presence_activity_string;
-        if (try_at(data, "presence_activity", presence_activity_string))
-        {
-            auto it = std::find_if(activity_to_string.begin(), activity_to_string.end(), [&presence_activity_string](const auto& pair)
-            {
-                return presence_activity_string.starts_with(pair.second);
-            });
-            if (it == activity_to_string.end())
-            {
-                // no special activity prefix, assume custom status
-                settings.activity_type = dpp::at_custom;
-                settings.presence_activity = presence_activity_string;
-            }
-            else
-            {
-                // special activity prefix found, assign activity and remove the prefix accordingly
-                settings.activity_type = it->first;
-                settings.presence_activity = presence_activity_string.substr(it->second.length());
-            }
-        }
-
-        if (try_at(data, "presence_update_rate_mins", settings.presence_update_rate_mins) && settings.presence_update_rate_mins < 0)
-        {
-            fixedphilip::log::error("'presence_update_rate_mins' is out of bounds - reverting to default");
-            settings.presence_update_rate_mins = 5;
-        }
 
         // partial load is fine
         return true;
@@ -107,8 +46,6 @@ namespace fixedphilip::discord
             return false;
         }
 
-        save(config_settings);
-
         if (token == FIXEDPHILIP_DEFAULT_TOKEN || token.empty())
         {
             fixedphilip::log::error("Bot token not set in config file");
@@ -131,7 +68,7 @@ namespace fixedphilip::discord
         auto cluster = static_cast<bot*>(event.owner);
         if (!cluster)
         {
-            fixedphilip::log::error("message_create_event: cluster was null");
+            fixedphilip::log::error("message_create_event: owner was null");
             co_return;
         }
 
@@ -143,7 +80,7 @@ namespace fixedphilip::discord
 
         std::string prefix = "";
         {
-            std::shared_lock _(cluster->settings_mutex_);
+            std::shared_lock _(cluster->settings_mutex);
             prefix = cluster->settings_.prefix;
         }
         if (!prefix.empty())
@@ -169,7 +106,7 @@ namespace fixedphilip::discord
             auto cluster = static_cast<bot*>(event.owner);
             if (!cluster)
             {
-                fixedphilip::log::error("ready_event_init: cluster was null");
+                fixedphilip::log::error("ready_event_init: owner was null");
                 co_return;
             }
             cluster->log(dpp::ll_info, "Connected and logged in as: " + cluster->me.format_username());
@@ -205,6 +142,7 @@ namespace fixedphilip::discord
                 slash_commands.push_back(slash_command);
             }
             module_commands.insert(module_commands.end(), iter_commands.begin(), iter_commands.end());
+            iter = iter->next();
         }
 
         auto result = co_await co_global_bulk_command_create(slash_commands);
@@ -337,7 +275,7 @@ namespace fixedphilip::discord
         {
             std::string prefix = "";
             {
-                std::shared_lock _(cluster->settings_mutex_);
+                std::shared_lock _(cluster->settings_mutex);
                 prefix = cluster->settings_.prefix;
             }
             if (prefix.empty())
@@ -351,7 +289,7 @@ namespace fixedphilip::discord
         {
             std::string prefix = "";
             {
-                std::shared_lock _(cluster->settings_mutex_);
+                std::shared_lock _(cluster->settings_mutex);
                 prefix = cluster->settings_.prefix;
             }
             auto name = message_create->msg.content.substr(prefix.length());
@@ -495,6 +433,8 @@ namespace fixedphilip::discord
         uint32_t maxclusters, bool compressed, dpp::cache_policy_t policy, uint32_t pool_threads) 
         : dpp::cluster(token, intents, shards, cluster_id, maxclusters, compressed, policy, pool_threads)
     {
+        settings_ = settings;
+
         // attach our own events first (modules do it in their inits)
         on_log.attach(log_event);
         on_ready.attach(ready_event);
@@ -508,7 +448,7 @@ namespace fixedphilip::discord
         {
             if (iter->init(*this))
             {
-                loaded_modules.push_back(iter);
+                loaded_modules_.push_back(iter);
             }
             iter = iter->next();
         }
@@ -520,14 +460,14 @@ namespace fixedphilip::discord
         auto iter = fixedphilip::discord::bot::module::last();
         while (iter)
         {
-            if (loaded_modules.empty())
+            if (loaded_modules_.empty())
             {
                 return;
             }
-            auto last_loaded_module = loaded_modules.back();
+            auto last_loaded_module = loaded_modules_.back();
             if (iter == last_loaded_module)
             {
-                loaded_modules.pop_back();
+                loaded_modules_.pop_back();
                 iter->destroy(*this);
             }
             iter = iter->previous();

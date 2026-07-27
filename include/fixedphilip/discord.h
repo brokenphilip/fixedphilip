@@ -25,40 +25,15 @@ namespace fixedphilip::discord
 		struct settings
 		{
 			std::string prefix = "fp!";
-			dpp::presence_status presence_status = dpp::ps_online;
-
-			dpp::activity_type activity_type = dpp::at_listening;
-			std::string presence_activity = "%prefix%help | fixedphilip %version%";
-
-			int presence_update_rate_mins = 5;
 
 			// list of disabled modules, separated by maybe not space but some other shit
 			// like , or ; or | or idfk
+			std::string disabled_modules = "";
 		};
 
 		// Configuration file structure
-		class config : public fixedphilip::file::json_pretty_print
+		struct config : public fixedphilip::file::json_pretty_print
 		{
-			// just online/idle is functional?
-			const std::unordered_map<dpp::presence_status, std::string> status_to_string
-			{
-				{ dpp::ps_offline, "offline" },
-				{ dpp::ps_online, "online" },
-				{ dpp::ps_dnd, "dnd" },
-				{ dpp::ps_idle, "idle" },
-				{ dpp::ps_invisible, "invisible" },
-			};
-
-			// we use the full string for dpp::at_custom (also, emoji doesn't work with custom?)
-			const std::unordered_map<dpp::activity_type, std::string> activity_to_string
-			{
-				{ dpp::at_game, "Playing " },
-				{ dpp::at_streaming, "Streaming " },
-				{ dpp::at_listening, "Listening to " },
-				{ dpp::at_watching, "Watching " },
-				{ dpp::at_competing, "Competing in " },
-			};
-		public:
 			std::string token = FIXEDPHILIP_DEFAULT_TOKEN;
 			settings settings;
 
@@ -132,11 +107,14 @@ namespace fixedphilip::discord
 			inline auto description() { return description_; }
 		};
 	private:
-		std::vector<module*> loaded_modules;
+		std::vector<module*> loaded_modules_;
+		std::shared_mutex loaded_modules_mutex;
+
 		std::vector<command> module_commands;
+		//std::shared_mutex module_commands_mutex;
 
 		settings settings_;
-		std::shared_mutex settings_mutex_;
+		std::shared_mutex settings_mutex;
 
 		dpp::user app_owner_;
 		std::shared_mutex app_owner_mutex;
@@ -153,8 +131,6 @@ namespace fixedphilip::discord
 		static event_t<dpp::ready_t> ready_event;
 
 		dpp::task<void> init_commands();
-		//dpp::task<void> init_presence(bool delme);
-		//void update_presence(bool delme);
 
 		void fetch_app_info_async();
 	public:
@@ -164,11 +140,14 @@ namespace fixedphilip::discord
 
 		virtual ~bot();
 
+		inline auto loaded_modules()
+			{ std::shared_lock _(loaded_modules_mutex); return loaded_modules_; }
+
 		// Returns the bot's settings. Make sure to lock its mutex before reading/writing
 		inline auto& get_settings() { return settings_; }
 
 		// Returns the bot's settings mutex. Use shared_lock for reads and unique_lock for writes
-		inline auto& get_settings_mutex() { return settings_mutex_; }
+		inline auto& get_settings_mutex() { return settings_mutex; }
 
 		// Returns a copy of the dpp::user who owns this app/instance
 		inline auto app_owner() 
