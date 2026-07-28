@@ -35,7 +35,7 @@ namespace fixedphilip::discord
 		struct config : public fixedphilip::file::json_pretty_print
 		{
 			std::string token = FIXEDPHILIP_DEFAULT_TOKEN;
-			settings settings;
+			bot::settings settings;
 
 			virtual nlohmann::json struct_to_json() override final;
 			virtual bool json_to_struct(const nlohmann::json& data) override final;

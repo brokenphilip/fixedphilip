@@ -83,7 +83,7 @@ namespace fixedphilip::math
 
 		struct unit_search_result
 		{
-			unit* unit;
+			conversion::unit* unit;
 			size_t index;
 		};
 		struct all_unit_search_result : public unit_search_result
@@ -327,10 +327,8 @@ namespace fixedphilip::math
 		struct conversion_currency : public fixedphilip::math::conversion::unit
 		{
 			conversion_currency(std::string full_name, std::string alias, fixedphilip::math::number_t currency_to_one_usd, fixedphilip::math::number_t one_usd_to_currency)
+				: fixedphilip::math::conversion::unit(full_name, { alias })
 			{
-				display_name = full_name;
-				aliases = { alias };
-
 				unit_to_base = [currency_to_one_usd](fixedphilip::math::number_t currency)
 				{
 					return currency * currency_to_one_usd;
@@ -339,11 +337,6 @@ namespace fixedphilip::math
 				{
 					return usd * one_usd_to_currency;
 				};
-
-				string_to_unit = [name = display_name](const std::string& expression)
-					{ return parse_expression_throws(expression, name); };
-				unit_to_string = [name = display_name](number_t unit, int decimals, bool separate)
-					{ return format_number(unit, decimals, separate) + " " + name; };
 			}
 		};
 
@@ -460,5 +453,29 @@ namespace fixedphilip::math
 		std::erase_if(fixedphilip::math::conversion::families, [](const auto& item) { return item.name.starts_with("Currency"); });
 		fixedphilip::math::conversion::families.push_back(currency_conversion_family);
 		return true;
+	}
+
+	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list)
+		: display_name(name), aliases(alias_list)
+	{
+		unit_to_base = identity;
+		base_to_unit = identity;
+
+		string_to_unit = [name](const std::string& expression) { return parse_expression_throws(expression, name); };
+		unit_to_string = [name](number_t unit, int decimals, bool separate) { return format_number(unit, decimals, separate) + " " + name; };
+	}
+
+	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list, unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function)
+		: display_name(name), aliases(alias_list), unit_to_base(unit_to_base_function), base_to_unit(base_to_unit_function)
+	{
+		string_to_unit = [name](const std::string& expression) { return parse_expression_throws(expression, name); };
+		unit_to_string = [name](number_t unit, int decimals, bool separate) { return format_number(unit, decimals, separate) + " " + name; };
+	}
+
+	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list, string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function)
+		: display_name(name), aliases(alias_list), string_to_unit(string_to_unit_function), unit_to_string(unit_to_string_function)
+	{
+		unit_to_base = identity;
+		base_to_unit = identity;
 	}
 }

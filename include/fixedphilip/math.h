@@ -100,7 +100,7 @@ namespace fixedphilip::math
 	inline number_t fahrenheit_to_celsius(number_t fahrenheit) { return (fahrenheit - number_t(32)) * number_t(5) / number_t(9); }
 
 	number_t parse_expression_throws(const std::string& expression, const std::string& name);
-	inline number_t return_self(number_t self) { return self; }
+	inline number_t identity(number_t self) { return self; }
 
     class conversion
     {
@@ -115,13 +115,32 @@ namespace fixedphilip::math
             std::string display_name;
             std::vector<std::string> aliases;
 
-            unit_to_base_fn unit_to_base = return_self;
-            base_to_unit_fn base_to_unit = return_self;
+            unit_to_base_fn unit_to_base;
+            base_to_unit_fn base_to_unit;
 
-            string_to_unit_fn string_to_unit = [name = display_name](const std::string& expression)
-                { return parse_expression_throws(expression, name); };
-            unit_to_string_fn unit_to_string = [name = display_name](number_t unit, int decimals, bool separate)
-                { return format_number(unit, decimals, separate) + " " + name; };
+            string_to_unit_fn string_to_unit;
+            unit_to_string_fn unit_to_string;
+
+            // these four useless constructors were brought to you by g++, thanks very cool :3
+
+            // creates an identity unit with standard string parsing functions
+            unit(std::string name, std::initializer_list<std::string> alias_list);
+
+            // creates a unit with standard string parsing functions
+            unit(std::string name, std::initializer_list<std::string> alias_list,
+                unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function);
+
+            // creates an identity unit with custom string parsing functions
+            unit(std::string name, std::initializer_list<std::string> alias_list,
+                string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function);
+
+            // creates a unit with custom string parsing functions
+            inline unit(std::string name, std::initializer_list<std::string> alias_list,
+                unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function,
+                string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function)
+                :   display_name(name), aliases(alias_list),
+                    unit_to_base(unit_to_base_function), base_to_unit(base_to_unit_function),
+                    string_to_unit(string_to_unit_function), unit_to_string(unit_to_string_function) {};
         };
 
         struct family
@@ -129,12 +148,16 @@ namespace fixedphilip::math
             std::string name;
             std::vector<unit> units;
         };
-
-        static void convert(const std::string& input, const std::string& destination_units, int decimals = -1, bool separate = false,
-            std::string* result_out = nullptr, std::string* family_name_out = nullptr, number_t* single_dest_result_out = nullptr);
-
-        static bool update_currencies(const nlohmann::json& data);
     private:
+        //static inline std::vector<family> families
+        //{
+        //    { "Abcd", 
+        //        {
+        //            { "nm", {"nm"}},
+        //        }
+        //    },
+        //};
+
         static inline std::vector<family> families
         {
             { "Length",
@@ -180,5 +203,10 @@ namespace fixedphilip::math
             },
         };
     public:
+
+        static void convert(const std::string& input, const std::string& destination_units, int decimals = -1, bool separate = false,
+            std::string* result_out = nullptr, std::string* family_name_out = nullptr, number_t* single_dest_result_out = nullptr);
+
+        static bool update_currencies(const nlohmann::json& data);
     };
 }
