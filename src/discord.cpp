@@ -80,12 +80,12 @@ namespace fixedphilip::discord
 
         std::string prefix = "";
         {
-            std::shared_lock _(cluster->settings_mutex);
+            std::shared_lock _(cluster->settings_mutex_);
             prefix = cluster->settings_.prefix;
         }
         if (!prefix.empty())
         {
-            for (auto& module_command : cluster->module_commands)
+            for (auto& module_command : cluster->module_commands_)
             {
                 auto command = std::format("{}{}", prefix, module_command.name);
 
@@ -129,7 +129,7 @@ namespace fixedphilip::discord
         co_return;
     }
 
-    dpp::task<void> bot::init_commands()
+    void bot::create_commands()
     {
         std::vector<dpp::slashcommand> slash_commands;
 
@@ -141,9 +141,15 @@ namespace fixedphilip::discord
             {
                 slash_commands.push_back(slash_command);
             }
-            module_commands.insert(module_commands.end(), iter_commands.begin(), iter_commands.end());
+            module_commands_.insert(module_commands_.end(), iter_commands.begin(), iter_commands.end());
             iter = iter->next();
         }
+
+        global_bulk_command_create(slash_commands, [](const dpp::confirmation_callback_t& result)
+            {
+
+            });
+
 
         auto result = co_await co_global_bulk_command_create(slash_commands);
         if (auto command_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("init_commands, co_global_bulk_command_create", result))
@@ -153,7 +159,7 @@ namespace fixedphilip::discord
             bool first_command = true;
             for (const auto& [snowflake, command] : *command_map)
             {
-                for (auto& module_command : module_commands)
+                for (auto& module_command : module_commands_)
                 {
                     if (module_command.name == command.name)
                     {
@@ -163,7 +169,7 @@ namespace fixedphilip::discord
                         });
                     }
                 }
-                slash_command_snowflakes[command.name] = snowflake;
+                slash_command_snowflakes_[command.name] = snowflake;
                 if (first_command)
                 {
                     result_log += ": '" + command.name + "'";
@@ -275,7 +281,7 @@ namespace fixedphilip::discord
         {
             std::string prefix = "";
             {
-                std::shared_lock _(cluster->settings_mutex);
+                std::shared_lock _(cluster->settings_mutex_);
                 prefix = cluster->settings_.prefix;
             }
             if (prefix.empty())
@@ -289,7 +295,7 @@ namespace fixedphilip::discord
         {
             std::string prefix = "";
             {
-                std::shared_lock _(cluster->settings_mutex);
+                std::shared_lock _(cluster->settings_mutex_);
                 prefix = cluster->settings_.prefix;
             }
             auto name = message_create->msg.content.substr(prefix.length());
@@ -307,44 +313,6 @@ namespace fixedphilip::discord
         reply(std::format(":warning: **| Not implemented, use {} instead.**", command_text));
     }
 
-    /*
-    dpp::task<void> bot::init_presence()
-    {
-        update_presence();
-
-        auto update_rate_mins = instance_->config_.presence_update_rate_mins;
-        if (update_rate_mins > 0)
-        {
-            cluster_.start_timer([](const dpp::timer& timer) -> dpp::task<void>
-            {
-                if (!instance_)
-                {
-                    fixedphilip::log::error("update_presence timer: bot was null");
-                    co_return;
-                }
-                instance_->update_presence();
-            },
-            60 * update_rate_mins);
-        }
-        co_return;
-    }
-
-    void bot::update_presence()
-    {
-        const std::vector<std::pair<std::string, std::string>> token_conversion
-        {
-            { "%prefix%", config_.prefix },
-            { "%version%", std::to_string(FIXEDPHILIP_BUILD_VERSION_NUM) },
-        };
-
-        std::string presence_string = instance_->config_.presence_activity;
-        for (int i = 0; i < token_conversion.size(); i++)
-        {
-            fixedphilip::utils::string::replace_all(presence_string, token_conversion[i].first, token_conversion[i].second);
-        }
-        cluster_.set_presence(dpp::presence(instance_->config_.presence_status, instance_->config_.activity_type, presence_string));
-    }
-    */
     void bot::fetch_app_info_async()
     {
         // as this function's name implies, the lambda will run asynchronously(!!!) and NOT when this function is called

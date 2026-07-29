@@ -49,7 +49,7 @@ namespace fixedphilip::math
 		return result_str;
 	}
 
-	number_t parse_expression_throws(const std::string& expression, const std::string& name)
+	number_t conversion::parse_expression_throws(const std::string& expression, const std::string& name)
 	{
 		int error = 0;
 		auto result = te_interp(expression.c_str(), &error);
@@ -340,13 +340,7 @@ namespace fixedphilip::math
 			}
 		};
 
-		fixedphilip::math::conversion::family currency_conversion_family
-		{
-			family_name,
-			{
-				conversion_currency { "U.S. Dollar", "usd", 1, 1 },
-			}
-		};
+		fixedphilip::math::conversion::family currency_conversion_family { family_name, {} };
 
 		for (auto& [currency_key, currency_info] : data.items())
 		{
@@ -447,8 +441,15 @@ namespace fixedphilip::math
 				continue;
 			}
 
-			currency_conversion_family.units.push_back(conversion_currency{ pretty_print, name, currency_to_usd, usd_to_currency });
+			currency_conversion_family.units.push_back(conversion_currency { pretty_print, name, currency_to_usd, usd_to_currency });
 		}
+
+		if (currency_conversion_family.units.empty())
+		{
+			fixedphilip::log::error("The new currency conversion family is empty and will not be updated");
+			return false;
+		}
+		currency_conversion_family.units.push_back(conversion_currency { "U.S. Dollar", "usd", 1, 1 });
 
 		std::erase_if(fixedphilip::math::conversion::families, [](const auto& item) { return item.name.starts_with("Currency"); });
 		fixedphilip::math::conversion::families.push_back(currency_conversion_family);

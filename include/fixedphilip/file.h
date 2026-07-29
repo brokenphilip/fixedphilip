@@ -8,6 +8,7 @@
 
 namespace fixedphilip::file
 {
+	// Settings used by file::base when loading and saving files
 	struct settings
 	{
 		// Name of the file being saved, relative to the current directory
@@ -21,6 +22,7 @@ namespace fixedphilip::file
 		bool log = true;
 	};
 
+	// Enum for results returned by file::base::load/save
 	enum result
 	{
 		r_success,
@@ -31,14 +33,15 @@ namespace fixedphilip::file
 		r_parse_error,
 	};
 
+	// Base file structure, which can save (or load) string data to (or from) a file
 	struct base
 	{
-		// Use this function to convert your data structure to a string,
-		// which will be written to a file
+		// Use this function to convert your data structure to a string, which will be written to a file
 		virtual std::string save_from_struct() = 0;
 
-		// Use this function to convert the string data loaded from a file
-		// to your data structure. Return false to pass 's_parse_error' to load()
+		// Use this function to convert the string data loaded from a file to your data structure
+		// Return false to pass 's_parse_error' to the load() function
+		// (if you're okay with partial loads, particularly if you make use of default values, return true)
 		virtual bool load_to_struct(const std::string& data) = 0;
 
 		// Load data structure from file, based on load settings. On success, returns 'r_success' - on failure, returns:
@@ -46,7 +49,7 @@ namespace fixedphilip::file
 		// - 'r_write_error' if it failed to write defaults to the file
 		// - 'r_read_error' if it failed to read the file
 		// - 'r_file_not_found' if the file was not found (default data will be written if create_if_not_found is enabled)
-		// - 'r_parse_error' if the data couldn't be parsed (load_to_struct == false)
+		// - 'r_parse_error' if the data couldn't be parsed (load_to_struct returned false)
 		result load(const settings& load_settings);
 
 		// Load data structure from file, based on load settings. On success, returns 'r_success' - on failure, returns:
@@ -56,13 +59,17 @@ namespace fixedphilip::file
 		result save(const settings& save_settings);
 	};
 
+	// An extension of the base file structure, which saves compact json data to a file
+	// If you're looking for something more user-friendly (eg. for configuration files), use the json_pretty_print
+	// Or, you may also supply your own indentation count and indentation character in the template parameters
+	// Additionally, you may override 'save_from_struct'/'load_to_struct' if necessary, but this struct already does it for you
 	template <int indent = -1, char indent_char = ' '>
 	struct json : public base
 	{
 		// Helper wrapper function for json.at() with logging output
 		// Returns true if json.at() was successful, false otherwise
 		template <typename T>
-		bool try_at(const nlohmann::json& data, const std::string& key, T& member_variable)
+		static bool try_at(const nlohmann::json& data, const std::string& key, T& member_variable)
 		{
 			try
 			{
@@ -76,14 +83,12 @@ namespace fixedphilip::file
 			}
 		}
 
-		// Use this function to convert your data structure to a json,
-		// which will be written to a file
+		// Use this function to convert your data structure to a json, which will be written to a file
 		virtual nlohmann::json struct_to_json() = 0;
 
-		// Use this function to convert the string data loaded from a file
-		// to your data structure. Return false to pass 's_parse_error' to load()
-		// NOTE: If partial success is legal, it's better to return true than false,
-		// and handle uncaught exceptions on a per-case (member variable) basis
+		// Use this function to convert the string data loaded from a file to your data structure. Return false to pass 's_parse_error' to load()
+		// Return false to pass 's_parse_error' to the load() function
+		// (if you're okay with partial loads, particularly if you make use of default values, return true)
 		virtual bool json_to_struct(const nlohmann::json& data) = 0;
 
 		virtual std::string save_from_struct() override //final
@@ -105,5 +110,7 @@ namespace fixedphilip::file
 		}
 	};
 
+	// An extension of the base file structure, which saves pretty-printed json data to a file
+	// If you're looking for something more compact, use 
 	using json_pretty_print = json<4, ' '>;
 }

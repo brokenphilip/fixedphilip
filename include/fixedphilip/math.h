@@ -10,9 +10,9 @@
 
 namespace fixedphilip::math
 {
+    // NOTE: a lot of functions rely on number_t being double, needs to be cleaned up
 	using number_t = double;
 	using conversion_fn = std::function<number_t(number_t)>;
-    inline number_t string_to_number(const std::string& str) { return std::stod(str); }
 
     struct thousands_separator : std::numpunct<char>
     {
@@ -22,13 +22,8 @@ namespace fixedphilip::math
         static std::string format_number(number_t number, int decimals = -1);
     };
 
+    inline number_t string_to_number(const std::string& str) { return std::stod(str); }
     std::string format_number(number_t number, int decimals = -1, bool separate = false);
-
-	// (string ->) unit -> base -> unit (-> string)
-	using string_to_unit_fn = std::function<number_t(const std::string& str)>;
-	using unit_to_base_fn = conversion_fn;
-	using base_to_unit_fn = conversion_fn;
-	using unit_to_string_fn = std::function<std::string(number_t, int, bool)>;
 
 	template <number_t other>
 	number_t add(number_t number)
@@ -75,6 +70,7 @@ namespace fixedphilip::math
     inline conversion_fn base_to_deci = multiply<10.0>;
 
     // 10^0 (1): base (default)
+    inline number_t identity(number_t self) { return self; }
 
     // 10^3: kilo
     inline conversion_fn kilo_to_base = multiply<1'000.0>;
@@ -96,14 +92,22 @@ namespace fixedphilip::math
     inline conversion_fn peta_to_base = multiply<1'000'000'000'000'000.0>;
     inline conversion_fn base_to_peta = divide<1'000'000'000'000'000.0>;
 
-	inline number_t celsius_to_fahrenheit(number_t celsius) { return celsius * number_t(9) / number_t(5) + number_t(32); }
-	inline number_t fahrenheit_to_celsius(number_t fahrenheit) { return (fahrenheit - number_t(32)) * number_t(5) / number_t(9); }
-
-	number_t parse_expression_throws(const std::string& expression, const std::string& name);
-	inline number_t identity(number_t self) { return self; }
-
+    // This class handles conversion between measurable units, as well as currencies
+    // Essentially just a namespace in practice, but hides implementation in "private" data
     class conversion
     {
+        // The conversion pipeline is as follows
+        // (string ->) unit -> base -> unit (-> string)
+        using string_to_unit_fn = std::function<number_t(const std::string& str)>;
+        using unit_to_base_fn = conversion_fn;
+        using base_to_unit_fn = conversion_fn;
+        using unit_to_string_fn = std::function<std::string(number_t, int, bool)>;
+
+        static inline number_t celsius_to_fahrenheit(number_t celsius) { return celsius * number_t(9) / number_t(5) + number_t(32); }
+        static inline number_t fahrenheit_to_celsius(number_t fahrenheit) { return (fahrenheit - number_t(32)) * number_t(5) / number_t(9); }
+
+        // Default string_to_unit function, which allows parsing math expressions
+        static number_t parse_expression_throws(const std::string& expression, const std::string& name);
     public:
         struct error : public std::runtime_error
         {
@@ -112,29 +116,35 @@ namespace fixedphilip::math
 
         struct unit
         {
+            // The "pretty" name of the unit that gets displayed to the user
             std::string display_name;
+
+            // Various aliases of the unit that get searched for when scanning user input
             std::vector<std::string> aliases;
 
+            // Functionms for converting between this unit and the base unit
+            // Generally, you want these two functions to be inverse of each other
             unit_to_base_fn unit_to_base;
             base_to_unit_fn base_to_unit;
 
+            // Functions for parsing the number from (and formatting the number to) a string
             string_to_unit_fn string_to_unit;
             unit_to_string_fn unit_to_string;
 
             // these four useless constructors were brought to you by g++, thanks very cool :3
 
-            // creates an identity unit with standard string parsing functions
+            // Creates an identity unit with standard string parsing functions
             unit(std::string name, std::initializer_list<std::string> alias_list);
 
-            // creates a unit with standard string parsing functions
+            // Creates a unit with standard string parsing functions
             unit(std::string name, std::initializer_list<std::string> alias_list,
                 unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function);
 
-            // creates an identity unit with custom string parsing functions
+            // Creates an identity unit with custom string parsing functions
             unit(std::string name, std::initializer_list<std::string> alias_list,
                 string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function);
 
-            // creates a unit with custom string parsing functions
+            // Creates a unit with custom string parsing functions
             inline unit(std::string name, std::initializer_list<std::string> alias_list,
                 unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function,
                 string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function)
@@ -149,15 +159,8 @@ namespace fixedphilip::math
             std::vector<unit> units;
         };
     private:
-        //static inline std::vector<family> families
-        //{
-        //    { "Abcd", 
-        //        {
-        //            { "nm", {"nm"}},
-        //        }
-        //    },
-        //};
-
+        // An internal list of unit families, used for conversion
+        // Currencies are added to the first successful call to "update_currencies"
         static inline std::vector<family> families
         {
             { "Length",
@@ -203,10 +206,14 @@ namespace fixedphilip::math
             },
         };
     public:
-
+        // Convert between a list of "input" units (and their values), to a list of "destination" units
+        // Throws conversion::error if conversion was unsuccessful, and std::runtime_error for more-general user input errors
+        // Pass "result_out" to get the resulting string and "family_name_out" to get the resulting unit family
+        // If you've supplied only one "destination" unit, you may also pass "single_dest_result_out" to get the numeric result
         static void convert(const std::string& input, const std::string& destination_units, int decimals = -1, bool separate = false,
             std::string* result_out = nullptr, std::string* family_name_out = nullptr, number_t* single_dest_result_out = nullptr);
 
+        // Update the internal list of unit families with the latest currency exchange information
         static bool update_currencies(const nlohmann::json& data);
     };
 }

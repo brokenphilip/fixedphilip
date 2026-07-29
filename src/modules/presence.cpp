@@ -109,29 +109,9 @@ namespace fixedphilip
 			}
 		};
 
-		config config_;
+		presence_module::config config;
 		std::shared_mutex config_mutex;
 		dpp::timer timer;
-
-		void init_presence(fixedphilip::discord::bot& bot)
-		{
-			update_presence(bot);
-
-			int update_rate_mins = -1;
-			{
-				std::shared_lock _(config_mutex);
-				update_rate_mins = config_.update_rate_mins;
-			}
-			if (update_rate_mins > 0)
-			{
-				timer = bot.start_timer([this, &bot](const dpp::timer& timer) -> dpp::task<void>
-				{
-					update_presence(bot);
-					co_return;
-				},
-				60 * update_rate_mins);
-			}
-		}
 
 		void update_presence(fixedphilip::discord::bot& bot)
 		{
@@ -146,15 +126,41 @@ namespace fixedphilip
 				{ "%prefix%", prefix },
 				{ "%version%", std::to_string(FIXEDPHILIP_BUILD_VERSION_NUM) },
 			};
+
+			std::string activity;
+			dpp::presence_status status;
+			dpp::activity_type type;
 			{
 				std::shared_lock _(config_mutex);
-				auto presence_string = config_.activity;
+				activity = config.activity;
+				status = config.status;
+				type = config.activity_type;
+			}
 
-				for (int i = 0; i < token_conversion.size(); i++)
+			for (int i = 0; i < token_conversion.size(); i++)
+			{
+				fixedphilip::utils::string::replace_all(activity, token_conversion[i].first, token_conversion[i].second);
+			}
+			bot.set_presence(dpp::presence(status, type, activity));
+		}
+
+		void init_presence(fixedphilip::discord::bot& bot)
+		{
+			update_presence(bot);
+
+			int update_rate_mins = -1;
+			{
+				std::shared_lock _(config_mutex);
+				update_rate_mins = config.update_rate_mins;
+			}
+			if (update_rate_mins > 0)
+			{
+				timer = bot.start_timer([this, &bot](const dpp::timer& timer) -> dpp::task<void>
 				{
-					fixedphilip::utils::string::replace_all(presence_string, token_conversion[i].first, token_conversion[i].second);
-				}
-				bot.set_presence(dpp::presence(config_.status, config_.activity_type, presence_string));
+					update_presence(bot);
+					co_return;
+				},
+				60 * update_rate_mins);
 			}
 		}
 
@@ -236,7 +242,7 @@ namespace fixedphilip
 			}
 		}
 
-		public:
+	public:
 		presence_module() : fixedphilip::discord::bot::module("presence", "Manages the bot's activity/status presence") {}
 	};
 

@@ -22,6 +22,7 @@ namespace fixedphilip::utils::string
         }
     };
 
+    // Replace all instances of "from" with "to" in "str"
     inline void replace_all(std::string& str, const std::string& from, const std::string& to)
     {
         if (from.empty())
@@ -37,6 +38,7 @@ namespace fixedphilip::utils::string
         }
     }
 
+    // Split "str" into individual tokens, by any amount of whitespace
     inline std::vector<std::string> split_by_whitespace(const std::string& str)
     {
         std::istringstream iss(str);
@@ -45,13 +47,15 @@ namespace fixedphilip::utils::string
 
     namespace inplace
     {
+        // Replaces all characters within a string to their lowercase equivalents
         inline void to_lowercase(std::string& source_dest)
         {
             auto to_lowercase_fn = [](unsigned char c) { return std::tolower(c); };
             std::ranges::transform(source_dest, source_dest.begin(), to_lowercase_fn);
         }
 
-        inline void remove_multi_whitespace(std::string& source_dest)
+        // Removes all extra spaces (and spaces only, NOT other whitespace) from a string
+        inline void remove_extra_spaces(std::string& source_dest)
         {
             auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
             auto new_end = std::unique(source_dest.begin(), source_dest.end(), both_are_spaces);

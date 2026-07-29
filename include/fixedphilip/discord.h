@@ -1,13 +1,17 @@
 #pragma once
 
 //#include <format>
-#include <variant>
 
 #include <dpp/dpp.h>
 
 #include <fixedphilip/file.h>
 #include <fixedphilip/log.h>
+
 #include <fixedphilip/utils/named_node.h>
+#include <fixedphilip/utils/time.h>
+
+#include <variant>
+
 
 #define FIXEDPHILIP_DEFAULT_TOKEN "your_bot_token_here"
 
@@ -20,18 +24,19 @@ namespace fixedphilip::discord
 	{
 	public:
 		// Settings stored and used inside each fixedphilip bot/cluster
+		// These settings can be loaded from and saved to a config file, see the config struct below
 		// Modify this data structure to add new settings to the config/bot classes
-		// (instead of modifying them individually)
 		struct settings
 		{
+			// Chat prefix for old-style commands (can be set to blank to disable)
 			std::string prefix = "fp!";
 
-			// list of disabled modules, separated by maybe not space but some other shit
-			// like , or ; or | or idfk
-			std::string disabled_modules = "";
+			// List of disabled modules by name
+			// Each name accepts one wildcard ('*')
+			std::vector<std::string> disabled_modules = {};
 		};
 
-		// Configuration file structure
+		// Configuration file structure which can be used to load fixedphilip bot/cluster settings
 		struct config : public fixedphilip::file::json_pretty_print
 		{
 			std::string token = FIXEDPHILIP_DEFAULT_TOKEN;
@@ -40,12 +45,19 @@ namespace fixedphilip::discord
 			virtual nlohmann::json struct_to_json() override final;
 			virtual bool json_to_struct(const nlohmann::json& data) override final;
 
+			//
 			bool load_from_file(const std::string& filename);
 		};
 
+		// Slash command wrapper with an accompanying run function that supports:
+		// - old-style (chat prefix) commands, unless disabled (blank prefix)
+		// - "CHAT_INPUT" ie. regular (chat) slash commands
+		// - "USER" ie. (right-click) user context menu commands
+		// - "MESSAGE" ie. (right-click) message context menu commands
 		class command : public dpp::slashcommand
 		{
 		public:
+			// check cormands.txt it woul be very cool i tink
 			struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t>
 			{
 				inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
@@ -92,6 +104,7 @@ namespace fixedphilip::discord
 			}
 		};
 
+		//
 		class module : public fixedphilip::utils::named_node<module>
 		{
 			// TODO: command which lists all modules, active and inactive
@@ -107,20 +120,23 @@ namespace fixedphilip::discord
 			inline auto description() { return description_; }
 		};
 	private:
+		fixedphilip::utils::time::raii_stopwatch bot_uptime_;
+		std::chrono::system_clock::time_point bot_start_time_ = std::chrono::system_clock::now();
+
 		std::vector<module*> loaded_modules_;
-		std::shared_mutex loaded_modules_mutex;
+		std::shared_mutex loaded_modules_mutex_;
 
-		std::vector<command> module_commands;
-		//std::shared_mutex module_commands_mutex;
+		std::vector<command> module_commands_;
+		//std::shared_mutex module_commands_mutex_;
 
-		settings settings_;
-		std::shared_mutex settings_mutex;
+		bot::settings settings_;
+		std::shared_mutex settings_mutex_;
 
 		dpp::user app_owner_;
-		std::shared_mutex app_owner_mutex;
+		std::shared_mutex app_owner_mutex_;
 
-		std::unordered_map<std::string, dpp::snowflake> slash_command_snowflakes;
-		std::shared_mutex slash_command_snowflakes_mutex;
+		std::unordered_map<std::string, dpp::snowflake> slash_command_snowflakes_;
+		std::shared_mutex slash_command_snowflakes_mutex_;
 
 		static void logger(const dpp::log_t&);
 
@@ -130,7 +146,7 @@ namespace fixedphilip::discord
 		static event_t<dpp::message_create_t> message_create_event;
 		static event_t<dpp::ready_t> ready_event;
 
-		dpp::task<void> init_commands();
+		void create_commands();
 
 		void fetch_app_info_async();
 	public:
@@ -141,13 +157,13 @@ namespace fixedphilip::discord
 		virtual ~bot();
 
 		inline auto loaded_modules()
-			{ std::shared_lock _(loaded_modules_mutex); return loaded_modules_; }
+			{ std::shared_lock _(loaded_modules_mutex_); return loaded_modules_; }
 
 		// Returns the bot's settings. Make sure to lock its mutex before reading/writing
-		inline auto& get_settings() { return settings_; }
+		inline auto& settings() { return settings_; }
 
 		// Returns the bot's settings mutex. Use shared_lock for reads and unique_lock for writes
-		inline auto& get_settings_mutex() { return settings_mutex; }
+		inline auto& settings_mutex() { return settings_mutex; }
 
 		// Returns a copy of the dpp::user who owns this app/instance
 		inline auto app_owner() 
