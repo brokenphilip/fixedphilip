@@ -160,6 +160,22 @@ namespace fixedphilip::math
 
         static inline std::vector<family> families
         {
+            { "Area",
+                {
+                    { "mm²", { "sq.mm", "sqmm", "mm2", "mm^2"/*, "square millimeter", "square millimeters", "square millimetre", "square millimetres"*/ }, micro_to_base, base_to_micro },
+                    { "cm", { "cm", "centimeter", "centimeters", "centimetre", "centimetres" }, centi_to_base, base_to_centi },
+                    { "dm", { "dm", "decimeter", "decimeters", "decimetre", "decimetres" }, deci_to_base, base_to_deci },
+                    { "m²", { "sq.m", "sqm", "m2", "m^2"/*, "square meter", "square meters", "square metre", "square metres"*/ } },
+                    { "km²", { "sq.km", "sqkm", "km2", "km^2"/*, "square kilometer", "square kilometers", "square kilometre", "square kilometres"*/ }, mega_to_base, base_to_mega },
+
+                    { "in²", { "sq.in", "sqin", "in2", "in^2"/*, "square inch", "square inches"*/ }, multiply<0.00064516>, divide<0.00064516> },
+                    { "ft²", { "sq.ft", "sqft", "ft2", "ft^2"/*, "square foot", "square feet"*/ }, multiply<0.09290304>, divide<0.09290304> },
+                    { "yd²", { "sq.yd", "sqyd", "yd2", "yd^2"/*, "square yard", "square yards"*/ }, multiply<0.83612736>, divide<0.83612736> },
+                    { "mi²", { "sq.mi", "sqmi", "mi2", "mi^2"/*, "square mile", "square miles"*/ }, multiply<2'589'988.110336>, divide<2'589'988.110336> },
+
+                    { "Hu²", { "sq.hu", "sqhu", "hu2", "hu^2"/*, "square hammer unit", "square hammer units"*/ }, divide<2'755.55704356>, multiply<2'755.55704356> },
+                }
+            },
             { "Length",
                 {
                     { "nm", { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano },
@@ -177,7 +193,7 @@ namespace fixedphilip::math
 
                     { "nmi", { "nmi", "nm"/*, "nautical mile", "nautical miles"*/ }, multiply<1'852.0>, divide<1'852.0> },
 
-                    { "Hu", { "hu"/*, "hammer unit", "hammer units"*/ }, divide<52.4934>, multiply<52.4934 },
+                    { "Hu", { "hu"/*, "hammer unit", "hammer units"*/ }, divide<52.4934>, multiply<52.4934> },
                 }
             },
             { "Speed",
