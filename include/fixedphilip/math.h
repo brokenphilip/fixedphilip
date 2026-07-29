@@ -149,15 +149,6 @@ namespace fixedphilip::math
             std::vector<unit> units;
         };
     private:
-        //static inline std::vector<family> families
-        //{
-        //    { "Abcd", 
-        //        {
-        //            { "nm", {"nm"}},
-        //        }
-        //    },
-        //};
-
         static inline std::vector<family> families
         {
             { "Area",
