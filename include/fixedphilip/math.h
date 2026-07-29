@@ -162,20 +162,31 @@ namespace fixedphilip::math
         {
             { "Length",
                 {
-                    { "nm", { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano},
+                    { "nm", { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano },
                     { "µm", { "um", "micrometer", "micrometers", "micrometre", "micrometres" }, micro_to_base, base_to_micro },
                     { "mm", { "mm", "millimeter", "millimeters", "millimetre", "millimetres" }, milli_to_base, base_to_milli },
                     { "cm", { "cm", "centimeter", "centimeters", "centimetre", "centimetres" }, centi_to_base, base_to_centi },
                     { "dm", { "dm", "decimeter", "decimeters", "decimetre", "decimetres" }, deci_to_base, base_to_deci },
                     { "m", { "m", "meter", "meters", "metre", "metres" } },
                     { "km", { "km", "kilometer", "kilometers", "kilometre", "kilometres" }, kilo_to_base, base_to_kilo },
+
+                    { "in", { "in", "inch", "inches", "\"" }, multiply<0.0254>, divide<0.0254> },
+                    { "ft", { "ft", "foot", "feet", "'" }, multiply<0.3048>, divide<0.3048> },
+                    { "yd", { "yd, "yard", "yards" }, multiply<0.9144>, divide<0.9144> },
+                    { "mi", { "mi", "mile", "miles" }, multiply<1609.344>, divide<1609.344> },
+
+                    { "nmi", { "nmi", "nm"/*, "nautical mile", "nautical miles"*/ }, multiply<1'852.0>, divide<1'852.0> },
+
+                    { "Hu", { "hu"/*, "hammer unit", "hammer units"*/ }, divide<52.4934>, multiply<52.4934 },
                 }
             },
             { "Speed",
                 {
                     { "km/h", { "km/h", "kmh", "kph", "kmph" } },
-                    { "mph", { "mph", "mi/h" }, multiply<1.609344>, divide<1.609344> },
                     { "m/s", { "m/s", "mps"}, multiply<3.6>, divide<3.6> },
+
+                    { "mph", { "mph", "mi/h" }, multiply<1.609344>, divide<1.609344> },
+
                     { "kn", { "kn", "kt", "knot", "knots"}, multiply<1.852>, divide<1.852> },
                 }
             },
@@ -195,10 +206,10 @@ namespace fixedphilip::math
                     { "min", { "m", "min", "mins", "minute", "minutes" }, multiply<60.0>, divide<60.0> },
                     { "hr", { "h", "hr", "hrs", "hour", "hours" }, multiply<3'600.0>, divide<3'600.0> },
                     { "day(s)", { "day(s)", "d", "day", "days"}, multiply<86'400.0>, divide<86'400.0> },
-                    { "solar month(s)", { "mo", "month", "months", "smo", "solar month", "solar months" }, multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
-                    { "calendar month(s)", { "cmo", "calendar month", "calendar months" }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
-                    { "solar year(s)", { "y", "yr", "yrs", "sy", "syr", "syrs", "year", "years", "solar year", "solar years" }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
-                    { "calendar year(s)", { "cy", "cyr", "cyrs", "calendar year", "calendar years" }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
+                    { "solar month(s)", { "mo", "month", "months", "smo"/*, "solar month", "solar months"*/ }, multiply<(365.25 / 12) * 86'400>, divide<(365.25 / 12) * 86'400> },
+                    { "calendar month(s)", { "cmo"/*, "calendar month", "calendar months"*/ }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
+                    { "solar year(s)", { "y", "yr", "yrs", "sy", "syr", "syrs", "year", "years"/*, "solar year", "solar years"*/ }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
+                    { "calendar year(s)", { "cy", "cyr", "cyrs"/*, "calendar year", "calendar years"*/ }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
                 }
             },
         };
