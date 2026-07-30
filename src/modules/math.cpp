@@ -68,7 +68,7 @@ namespace fixedphilip
                 auto request = co_await cluster->co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
                 if (request.error != dpp::h_success)
                 {
-                    fixedphilip::log::error("Floatrates GET HTTP status " + std::to_string(request.status));
+                    cluster->log(dpp::ll_error, "Floatrates GET HTTP status " + std::to_string(request.status));
                     goto exit_update_currencies;
                 }
 
@@ -79,12 +79,12 @@ namespace fixedphilip
                 }
                 catch (const std::exception& e)
                 {
-                    fixedphilip::log::error(std::format("Exception parsing currency conversion json file: {}", e.what()));
+                    cluster->log(dpp::ll_error, std::format("Exception parsing currency conversion json file: {}", e.what()));
                     goto exit_update_currencies;
                 }
                 if (data.empty())
                 {
-                    fixedphilip::log::error("Currency conversion json file is empty");
+                    cluster->log(dpp::ll_error, "Currency conversion json file is empty");
                     goto exit_update_currencies;
                 }
 

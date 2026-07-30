@@ -7,9 +7,8 @@ project(${BOT_NAME})
 
 aux_source_directory("src" core_src)
 aux_source_directory("src/modules" core_src_modules)
-#aux_source_directory("src/commands/private" core_src_commands_private)
-#add_executable(${BOT_NAME} tinyexpr/tinyexpr.c ${core_src} ${core_src_tinyexpr} ${core_src_commands} ${core_src_commands_private})
-add_executable(${BOT_NAME} tinyexpr/tinyexpr.c ${core_src} ${core_src_tinyexpr} ${core_src_modules})
+aux_source_directory("src/modules/private" core_src_modules_private)
+add_executable(${BOT_NAME} tinyexpr/tinyexpr.c ${core_src} ${core_src_tinyexpr} ${core_src_modules} ${core_src_modules_private})
 
 target_compile_features(${BOT_NAME} PUBLIC cxx_std_20)
 

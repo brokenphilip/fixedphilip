@@ -28,7 +28,7 @@ namespace fixedphilip
 
             if (author == cluster->app_owner())
             {
-                fixedphilip::log::info("Shutdown initiated via command");
+                cluster->log(dpp::ll_info, "Shutdown initiated via command");
                 co_await event.co_reply(":wave: **| Shutting down...**");
 
                 // apparently you can't clear presences lol
