@@ -5,6 +5,8 @@
 #include <dpp/coro/task.h>
 #include <dpp/nlohmann/json.hpp>
 
+#include <tinyexpr.h>
+
 #include <functional>
 #include <locale>
 

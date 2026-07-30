@@ -77,6 +77,8 @@ namespace fixedphilip::discord
 			// check cormands.txt it woul be very cool i tink
 			struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t, dpp::message_context_menu_t, dpp::user_context_menu_t>
 			{
+				bot* get_bot() const;
+
 				inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
 				inline auto get_message_create() const { return std::get_if<dpp::message_create_t>(this); }
 				inline auto get_message_context_menu() const { return std::get_if<dpp::message_context_menu_t>(this); }
@@ -99,6 +101,22 @@ namespace fixedphilip::discord
 				inline void thinking_end(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { thinking_end(dpp::message(msg), callback); }
 
 				void reply_not_impl_use_other() const;
+
+				template <typename T>
+				T try_get_command_parameter(const std::string& param_name, T default_value) const
+				{
+					auto interaction = get_interaction_create();
+					if (!interaction)
+					{
+						// todo
+						return default_value;
+					}
+					if (auto param = interaction->get_parameter(param_name); auto value = std::get_if<T>(&param))
+					{
+						return *value;
+					}
+					return default_value;
+				}
 			};
 
 			using run_fn = std::function<dpp::task<void>(const run_event&)>;
@@ -135,7 +153,7 @@ namespace fixedphilip::discord
 			inline virtual ~module() {}
 
 			inline virtual bool init(bot& bot) { return true; }
-			inline virtual std::vector<command> commands() { return {}; }
+			inline virtual std::vector<command> commands(bot& bot) { return {}; }
 			inline virtual void destroy(bot& bot) {}
 
 			inline auto description() { return description_; }
@@ -154,6 +172,7 @@ namespace fixedphilip::discord
 		struct module_command : public command
 		{
 			dpp::event_handle event_handles[2] { SIZE_MAX };
+			dpp::snowflake snowflake {};
 			
 			inline module_command(const command& cmd) : command(cmd) {}
 		};

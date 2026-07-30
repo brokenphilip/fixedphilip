@@ -89,6 +89,15 @@ namespace fixedphilip::discord
         return true;
     }
 
+    bot* bot::command::run_event::get_bot() const
+    {
+        return std::visit([](auto& event_dispatch)
+        {
+            return static_cast<bot*>(event_dispatch.owner);
+        },
+        *this);
+    }
+
     const dpp::interaction_create_t* bot::command::run_event::get_interaction_create() const
     {
         if (auto slash_command = get_slash_command())
@@ -165,12 +174,7 @@ namespace fixedphilip::discord
 
     void bot::command::run_event::reply_not_impl_use_other() const
     {
-        auto cluster = std::visit([](auto& event_dispatch)
-        {
-            return static_cast<bot*>(event_dispatch.owner);
-        },
-        *this);
-
+        auto cluster = get_bot();
         if (!cluster)
         {
             fixedphilip::log::error("reply_not_impl_use_other: cluster was null");
@@ -278,7 +282,7 @@ namespace fixedphilip::discord
 
                 for (auto& loaded_module : loaded_modules_)
                 {
-                    for (auto& command : loaded_module->commands())
+                    for (auto& command : loaded_module->commands(*this))
                     {
                         module_commands_.emplace_back(command);
                         commands.push_back(command);
@@ -332,6 +336,7 @@ namespace fixedphilip::discord
                             continue;
                         }
 
+                        module_command->snowflake = snowflake;
                         if (module_command->type == dpp::ctxm_chat_input)
                         {
                             module_command->event_handles[0] = cluster->on_slashcommand.attach(
@@ -552,7 +557,8 @@ namespace fixedphilip::discord
         {
             return dpp::snowflake();
         }
-        return module_command->id;
+        // module_command->id is 0 for some reason
+        return module_command->snowflake;
     }
 
     bool bot::add_module(module* module_to_add)
