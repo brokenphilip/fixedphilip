@@ -178,7 +178,7 @@ namespace fixedphilip::discord
         if (!cluster)
         {
             fixedphilip::log::error("reply_not_impl_use_other: cluster was null");
-            reply(":warning: **| Not implemented.");
+            reply(":warning: **| Not implemented.**");
             return;
         }
 
@@ -188,7 +188,7 @@ namespace fixedphilip::discord
         {
             if (prefix.empty())
             {
-                reply(":warning: **| Not implemented.");
+                reply(":warning: **| Not implemented.**");
                 return;
             }
             command_text = "`" + prefix + slash_command->command.get_command_name() + "`";
@@ -210,7 +210,7 @@ namespace fixedphilip::discord
         else
         {
             cluster->log(dpp::ll_error, "reply_not_impl_use_other: incorrectly called by wrong run_event type");
-            reply(":warning: **| Not implemented.");
+            reply(":warning: **| Not implemented.**");
             return;
         }
         reply(std::format(":warning: **| Not implemented, use {} instead.**", command_text));
@@ -547,18 +547,29 @@ namespace fixedphilip::discord
         }
     }
 
-    dpp::snowflake bot::slash_command_snowflake(const std::string& slash_command)
+    std::string bot::format_running_time()
     {
-        auto module_command = std::find_if(module_commands_.begin(), module_commands_.end(), [&slash_command](const bot::module_command& other)
+        std::string str;
+        auto elapsed = running_time_.elapsed<std::chrono::seconds>();
+        if (elapsed > std::chrono::days(1))
         {
-            return other.name == slash_command && other.type == dpp::ctxm_chat_input;
-        });
-        if (module_command == module_commands_.end())
-        {
-            return dpp::snowflake();
+            auto days = std::chrono::duration_cast<std::chrono::days>(elapsed);
+            elapsed -= days;
+            str = std::format("{} {:%Hh %Mm}", days, elapsed);
         }
-        // module_command->id is 0 for some reason
-        return module_command->snowflake;
+        else if (elapsed > std::chrono::hours(1))
+        {
+            str = std::format("{:%Hh %Mm %Ss}", elapsed);
+        }
+        else if (elapsed > std::chrono::minutes(1))
+        {
+            str = std::format("{:%Mm %Ss}", elapsed);
+        }
+        else
+        {
+            str = std::format("{:%Ss}", elapsed);
+        }
+        return str;
     }
 
     bool bot::add_module(module* module_to_add)
@@ -597,6 +608,20 @@ namespace fixedphilip::discord
         module_to_add->destroy(*this);
         loaded_modules_.erase(it);
         return true;
+    }
+
+    dpp::snowflake bot::slash_command_snowflake(const std::string& slash_command)
+    {
+        auto module_command = std::find_if(module_commands_.begin(), module_commands_.end(), [&slash_command](const bot::module_command& other)
+            {
+                return other.name == slash_command && other.type == dpp::ctxm_chat_input;
+            });
+        if (module_command == module_commands_.end())
+        {
+            return dpp::snowflake();
+        }
+        // module_command->id is 0 for some reason
+        return module_command->snowflake;
     }
 
     dpp::task<bot::counts> bot::co_get_counts()

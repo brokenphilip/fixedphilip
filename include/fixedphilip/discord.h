@@ -163,8 +163,8 @@ namespace fixedphilip::discord
 		bot_settings settings_;
 
 		// Constructed on startup and read-only - no need for a mutex
-		fixedphilip::utils::time::raii_stopwatch bot_uptime_;
-		std::chrono::system_clock::time_point bot_start_time_ = std::chrono::system_clock::now();
+		const fixedphilip::utils::time::raii_stopwatch running_time_;
+		const std::chrono::system_clock::time_point start_time_ = std::chrono::system_clock::now();
 
 		std::vector<module*> loaded_modules_;
 		std::shared_mutex loaded_modules_mutex_;
@@ -200,17 +200,16 @@ namespace fixedphilip::discord
 
 		virtual ~bot();
 
+		// Returns a copy of the bot's settings
+		inline auto settings() { return settings_; }
+
+		std::string format_running_time();
+		inline auto start_time_unix() { return std::chrono::duration_cast<std::chrono::seconds>(start_time_.time_since_epoch()).count(); }
+
 		// Returns a copy of the list of loaded modules
 		// Should you decide to modify a loaded module, you are responsible for its thread safety
 		inline auto loaded_modules()
 			{ std::shared_lock _(loaded_modules_mutex_); return loaded_modules_; }
-
-		// Returns a copy of the bot's settings
-		inline auto settings() { return settings_; }
-
-		// Returns a copy of the dpp::user who owns this app/instance
-		inline auto app_owner() 
-			{ std::shared_lock _(app_owner_mutex_); return app_owner_; }
 
 		// Given a slash command name, returns its snowflake
 		// Only works for CHAT_INPUT commands (context menu commands will not work)
@@ -224,6 +223,12 @@ namespace fixedphilip::discord
 		// Remove (early-unload) a module from the bot - returns true on success
 		// Returns false if this module is not loaded
 		bool remove_module(module* module_to_remove);
+
+		// Returns a copy of the dpp::user who owns this app/instance
+		inline auto app_owner()
+		{
+			std::shared_lock _(app_owner_mutex_); return app_owner_;
+		}
 
 		// Server and user counts, for the servers the bot is currently in, as well as all the (guild and user install) users it can see
 		struct counts

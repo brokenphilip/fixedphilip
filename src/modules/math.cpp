@@ -5,16 +5,12 @@ namespace fixedphilip
 {
 	class math_module : public fixedphilip::discord::bot::module
 	{
-		virtual bool init(fixedphilip::discord::bot& bot) override final
-		{
-			return true;
-		}
-
 		static dpp::task<void> run_calculate(const fixedphilip::discord::bot::command::run_event& event)
 		{
             auto cluster = event.get_bot();
             if (!cluster)
             {
+                event.reply(":warning: **| An internal error occurred.**");
                 fixedphilip::log::error("run_calculate: bot was null");
                 co_return;
             }
@@ -54,6 +50,7 @@ namespace fixedphilip
             auto cluster = event.get_bot();
             if (!cluster)
             {
+                event.reply(":warning: **| An internal error occurred.**");
                 fixedphilip::log::error("run_convert: bot was null");
                 co_return;
             }
