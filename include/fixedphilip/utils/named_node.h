@@ -88,9 +88,9 @@ namespace fixedphilip::utils
 		static inline auto first() { return first_; }
 		static inline auto last() { return last_; }
 
-		inline auto previous() { return prev_; }
-		inline auto next() { return next_; }
+		inline auto previous() const { return prev_; }
+		inline auto next() const { return next_; }
 
-		inline auto name() { return name_; }
+		inline auto name() const { return name_; }
 	};
 }

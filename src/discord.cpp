@@ -63,125 +63,21 @@ namespace fixedphilip::discord
         return true;
     }
 
-    dpp::task<void> bot::message_create_event(const dpp::message_create_t& event)
+    const dpp::interaction_create_t* bot::command::run_event::get_interaction_create() const
     {
-        auto cluster = static_cast<bot*>(event.owner);
-        if (!cluster)
+        if (auto slash_command = get_slash_command())
         {
-            fixedphilip::log::error("message_create_event: owner was null");
-            co_return;
+            return slash_command;
         }
-
-        // we don't want bots to run our commands
-        if (event.msg.author.is_bot())
+        else if (auto message_menu = get_message_context_menu())
         {
-            co_return;
+            return message_menu;
         }
-
-        std::string prefix = "";
+        else if (auto user_menu = get_user_context_menu())
         {
-            std::shared_lock _(cluster->settings_mutex_);
-            prefix = cluster->settings_.prefix;
+            return user_menu;
         }
-        if (!prefix.empty())
-        {
-            for (auto& module_command : cluster->module_commands_)
-            {
-                auto command = std::format("{}{}", prefix, module_command.name);
-
-                // old-style prefix commands - discouraged by Discord, but still convenient to have
-                if (event.msg.content == command || event.msg.content.starts_with(command + " "))
-                {
-                    co_await module_command.run(fixedphilip::discord::bot::command::run_event(event));
-                    co_return;
-                }
-            }
-        }
-    }
-
-    dpp::task<void> bot::ready_event(const dpp::ready_t& event)
-    {
-        if (dpp::run_once<struct ready_event_init>())
-        {
-            auto cluster = static_cast<bot*>(event.owner);
-            if (!cluster)
-            {
-                fixedphilip::log::error("ready_event_init: owner was null");
-                co_return;
-            }
-            cluster->log(dpp::ll_info, "Connected and logged in as: " + cluster->me.format_username());
-            co_await cluster->init_commands();
-            //co_await cluster->init_presence();
-        }
-    }
-
-    dpp::task<void> bot::log_event(const dpp::log_t& event)
-    {
-        // line 195 of cluster.cpp doesn't seem correct... 		dpp::log_t logmsg(nullptr, 0, msg); - why pass nullptr/0 ?! ?! ?!
-        fixedphilip::log::implementation(
-            event.severity, 
-            //std::format("Cl: {}, Sh: {}", 
-            //    event.owner ? std::to_string(event.owner->cluster_id) : "N/A", 
-            //    event.shard), 
-            "",
-            event.message);
-
-        co_return;
-    }
-
-    void bot::create_commands()
-    {
-        std::vector<dpp::slashcommand> slash_commands;
-
-        auto iter = fixedphilip::discord::bot::module::first();
-        while (iter)
-        {
-            auto iter_commands = iter->commands();
-            for (auto& slash_command : iter_commands)
-            {
-                slash_commands.push_back(slash_command);
-            }
-            module_commands_.insert(module_commands_.end(), iter_commands.begin(), iter_commands.end());
-            iter = iter->next();
-        }
-
-        global_bulk_command_create(slash_commands, [](const dpp::confirmation_callback_t& result)
-            {
-
-            });
-
-
-        auto result = co_await co_global_bulk_command_create(slash_commands);
-        if (auto command_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("init_commands, co_global_bulk_command_create", result))
-        {
-            auto result_log = std::format("Registered {} command{}", command_map->size(), command_map->size() == 1 ? "" : "s");
-
-            bool first_command = true;
-            for (const auto& [snowflake, command] : *command_map)
-            {
-                for (auto& module_command : module_commands_)
-                {
-                    if (module_command.name == command.name)
-                    {
-                        register_command(command.name, [run_fn = module_command.get_run_fn()](const dpp::slashcommand_t& event) -> dpp::task<void>
-                        {
-                            co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
-                        });
-                    }
-                }
-                slash_command_snowflakes_[command.name] = snowflake;
-                if (first_command)
-                {
-                    result_log += ": '" + command.name + "'";
-                }
-                else
-                {
-                    result_log += ", '" + command.name + "'";
-                }
-                first_command = false;
-            }
-            log(dpp::ll_info, result_log);
-        }
+        return nullptr;
     }
 
     const dpp::event_dispatch_t& bot::command::run_event::event_dispatch() const
@@ -195,70 +91,50 @@ namespace fixedphilip::discord
 
     void bot::command::run_event::reply(const dpp::message& msg, dpp::command_completion_event_t callback) const
     {
-        if (auto slash_command = get_slash_command())
-        {
-            slash_command->reply(msg, callback);
-            return;
-        }
-        else if (auto message_create = get_message_create())
+        if (auto message_create = get_message_create())
         {
             message_create->reply(msg, false, callback);
             return;
         }
+        get_interaction_create()->reply(msg, callback);
     }
 
     dpp::async<dpp::confirmation_callback_t> bot::command::run_event::co_reply(const dpp::message& msg) const
     {
-        if (auto slash_command = get_slash_command())
-        {
-            return slash_command->co_reply(msg);
-        }
-        else if (auto message_create = get_message_create())
+        if (auto message_create = get_message_create())
         {
             return message_create->co_reply(msg);
         }
-        return {}; // C4715, unreachable
+        return get_interaction_create()->co_reply(msg);
     }
 
     void bot::command::run_event::thinking_start() const
     {
-        if (auto slash_command = get_slash_command())
-        {
-            slash_command->thinking();
-            return;
-        }
-        else if (auto message_create = get_message_create())
+        if (auto message_create = get_message_create())
         {
             message_create->owner->channel_typing(message_create->msg.channel_id);
             return;
         }
+        get_interaction_create()->thinking();
     }
 
     dpp::async<dpp::confirmation_callback_t> bot::command::run_event::co_thinking_start() const
     {
-        if (auto slash_command = get_slash_command())
-        {
-            return slash_command->co_thinking();
-        }
-        else if (auto message_create = get_message_create())
+        if (auto message_create = get_message_create())
         {
             return message_create->owner->co_channel_typing(message_create->msg.channel_id);
         }
-        return {}; // C4715, unreachable
+        return get_interaction_create()->co_thinking();
     }
 
     void bot::command::run_event::thinking_end(const dpp::message& msg, dpp::command_completion_event_t callback) const
     {
-        if (auto slash_command = get_slash_command())
-        {
-            slash_command->edit_original_response(msg, callback);
-            return;
-        }
-        else if (auto message_create = get_message_create())
+        if (auto message_create = get_message_create())
         {
             message_create->reply(msg, false, callback);
             return;
         }
+        get_interaction_create()->edit_original_response(msg, callback);
     }
 
     void bot::command::run_event::reply_not_impl_use_other() const
@@ -276,14 +152,10 @@ namespace fixedphilip::discord
             return;
         }
 
+        auto prefix = cluster->settings().prefix;
         std::string command_text;
         if (auto slash_command = get_slash_command())
         {
-            std::string prefix = "";
-            {
-                std::shared_lock _(cluster->settings_mutex_);
-                prefix = cluster->settings_.prefix;
-            }
             if (prefix.empty())
             {
                 reply(":warning: **| Not implemented.");
@@ -293,16 +165,11 @@ namespace fixedphilip::discord
         }
         else if (auto message_create = get_message_create())
         {
-            std::string prefix = "";
-            {
-                std::shared_lock _(cluster->settings_mutex_);
-                prefix = cluster->settings_.prefix;
-            }
             auto name = message_create->msg.content.substr(prefix.length());
             auto snowflake = cluster->slash_command_snowflake(name);
             if (snowflake == dpp::snowflake(0))
             {
-                fixedphilip::log::error("Failed to find snowflake for command " + name);
+                cluster->log(dpp::ll_error, "Failed to find snowflake for command " + name);
                 command_text = "`/" + name + "`";
             }
             else
@@ -310,7 +177,197 @@ namespace fixedphilip::discord
                 command_text = dpp::utility::slashcommand_mention(snowflake, name);
             }
         }
+        else
+        {
+            cluster->log(dpp::ll_error, "reply_not_impl_use_other: incorrectly called by wrong run_event type");
+            reply(":warning: **| Not implemented.");
+            return;
+        }
         reply(std::format(":warning: **| Not implemented, use {} instead.**", command_text));
+    }
+
+    dpp::task<void> bot::ready_event(const dpp::ready_t& event)
+    {
+        if (dpp::run_once<struct ready_event_init>())
+        {
+            auto cluster = static_cast<bot*>(event.owner);
+            if (!cluster)
+            {
+                fixedphilip::log::error("ready_event_init: owner was null");
+                co_return;
+            }
+            cluster->ready_init_done_ = true;
+            cluster->log(dpp::ll_info, "Connected and logged in as: " + cluster->me.format_username());
+            cluster->create_commands_async();
+        }
+    }
+
+    dpp::task<void> bot::log_event(const dpp::log_t& event)
+    {
+        // line 195 of cluster.cpp doesn't seem correct... 		dpp::log_t logmsg(nullptr, 0, msg); - why pass nullptr/0 ?! ?! ?!
+        fixedphilip::log::implementation(
+            event.severity, 
+            //std::format("Cl: {}, Sh: {}", 
+            //    event.owner ? std::to_string(event.owner->cluster_id) : "N/A", 
+            //    event.shard), 
+            "",
+            event.message);
+
+        co_return;
+    }
+
+    void bot::create_commands_async()
+    {
+        // we must create a local copy specifically to pass to global_bulk_command_create()
+        std::vector<dpp::slashcommand> commands;
+
+        // iteratively erase all module commands in case we're updating them via module late-load
+        {
+            std::unique_lock _(module_commands_mutex_);
+
+            auto module_command = module_commands_.begin();
+            while (module_command != module_commands_.end())
+            {
+                if (module_command->type == dpp::ctxm_chat_input)
+                {
+                    on_slashcommand.detach(module_command->event_handles[0]);
+                    if ((intents & dpp::i_message_content) != 0)
+                    {
+                        on_message_create.detach(module_command->event_handles[1]);
+                    }
+                }
+                else if (module_command->type == dpp::ctxm_message)
+                {
+                    on_message_context_menu.detach(module_command->event_handles[0]);
+                }
+                else if (module_command->type == dpp::ctxm_user)
+                {
+                    on_user_context_menu.detach(module_command->event_handles[0]);
+                }
+                module_command = module_commands_.erase(module_command);
+            }
+
+            {
+                std::shared_lock _(loaded_modules_mutex_);
+
+                for (auto& loaded_module : loaded_modules_)
+                {
+                    for (auto& command : loaded_module->commands())
+                    {
+                        module_commands_.emplace_back(command);
+                        commands.push_back(command);
+                    }
+                }
+            }
+        }
+
+        // as this function's name implies, the lambda will run asynchronously(!!!) and NOT when this function is called
+        global_bulk_command_create(commands, [](const dpp::confirmation_callback_t& result) -> dpp::task<void>
+        {
+            if (auto command_map = fixedphilip::discord::get_if<dpp::slashcommand_map>("init_commands, global_bulk_command_create", result))
+            {
+                // HACK: you can't really do any of this safely anyways, might as well cast away the const
+                auto cluster = static_cast<bot*>(const_cast<dpp::cluster*>(result.bot));
+                if (!cluster)
+                {
+                    fixedphilip::log::error("init_commands, global_bulk_command_create: bot was null");
+                    co_return;
+                }
+
+                // we take the command_map results instead of our own (later down the line)
+                // because we want to informatively print which commands in specific discord has created
+                // ie. if any mistakes or errors happen below, we'll just print logs separately
+                auto result_log = std::format("Created {} command{}", command_map->size(), command_map->size() == 1 ? "" : "s");
+
+                bool first_command = true;
+                {
+                    std::unique_lock _(cluster->module_commands_mutex_);
+
+                    for (const auto& [snowflake, command] : *command_map)
+                    {
+                        if (first_command)
+                        {
+                            result_log += ": '" + command.name + "'";
+                        }
+                        else
+                        {
+                            result_log += ", '" + command.name + "'";
+                        }
+                        first_command = false;
+
+                        // find module command from the slashcommand map we're given (they're identical if their names AND TYPES match)
+                        auto module_command = std::find_if(cluster->module_commands_.begin(), cluster->module_commands_.end(), [&command](const bot::module_command& other)
+                        {
+                            return command.name == other.name && command.type == other.type;
+                        });
+                        if (module_command == cluster->module_commands_.end())
+                        {
+                            cluster->log(dpp::ll_error, std::format("Module command '{}' not found", command.name));
+                            continue;
+                        }
+
+                        if (module_command->type == dpp::ctxm_chat_input)
+                        {
+                            module_command->event_handles[0] = cluster->on_slashcommand.attach(
+                                [name = module_command->name, run_fn = module_command->get_run_fn()]
+                                (const dpp::slashcommand_t& event) -> dpp::task<void>
+                            {
+                                if (event.command.get_command_name() == name) co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                            });
+
+                            if ((cluster->intents & dpp::i_message_content) != 0)
+                            {
+                                module_command->event_handles[1] = cluster->on_message_create.attach(
+                                    [prefix = cluster->settings().prefix, name = module_command->name, run_fn = module_command->get_run_fn()]
+                                    (const dpp::message_create_t& event) -> dpp::task<void>
+                                {
+                                    // we don't want bots to run our commands
+                                    if (event.msg.author.is_bot())
+                                    {
+                                        co_return;
+                                    }
+
+                                    if (!prefix.empty())
+                                    {
+                                        auto command = std::format("{}{}", prefix, name);
+                                        if (event.msg.content == command || event.msg.content.starts_with(command + " "))
+                                        {
+                                            co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                        else if (module_command->type == dpp::ctxm_message)
+                        {
+                            module_command->event_handles[0] = cluster->on_message_context_menu.attach(
+                                [name = module_command->name, run_fn = module_command->get_run_fn()]
+                                (const dpp::message_context_menu_t& event) -> dpp::task<void>
+                            {
+                                if (event.command.get_command_name() == name) co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                            });
+                        }
+                        else if (module_command->type == dpp::ctxm_user)
+                        {
+                            module_command->event_handles[0] = cluster->on_user_context_menu.attach(
+                                [name = module_command->name, run_fn = module_command->get_run_fn()]
+                                (const dpp::user_context_menu_t& event) -> dpp::task<void>
+                            {
+                                if (event.command.get_command_name() == name) co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                            });
+                        }
+                        else
+                        {
+                            cluster->log(dpp::ll_error, std::format("Command '{}' is of invalid type", module_command->name));
+                            cluster->module_commands_.erase(module_command);
+                        }
+                    }
+                }
+
+                // all commands iterated, print resulting log
+                cluster->log(dpp::ll_info, result_log);
+            }
+        });
     }
 
     void bot::fetch_app_info_async()
@@ -322,7 +379,7 @@ namespace fixedphilip::discord
             if (auto app = fixedphilip::discord::get_if<dpp::application>("fetch_app_info_async, current_application_get", result))
             {
                 // HACK: you can't really do any of this safely anyways, might as well cast away the const
-                auto cluster = const_cast<dpp::cluster*>(result.bot);
+                auto cluster = static_cast<bot*>(const_cast<dpp::cluster*>(result.bot));
                 if (!cluster)
                 {
                     fixedphilip::log::error("fetch_app_info_async, current_application_get: bot was null");
@@ -330,8 +387,8 @@ namespace fixedphilip::discord
                 }
 
                 auto& app_owner = app->owner;
-                static_cast<bot*>(cluster)->app_owner_ = app_owner;
-                cluster->log(dpp::loglevel::ll_info, "Instance owner is: " + app_owner.username);
+                cluster->app_owner_ = app_owner;
+                cluster->log(dpp::loglevel::ll_info, "Application (instance) owner is: " + app_owner.username);
 
                 // check for any privileged intents - if we don't have permission to use them, disable them
                 uint32_t intents_to_disable = 0;
@@ -370,10 +427,16 @@ namespace fixedphilip::discord
                         "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
                     );
                     intents_to_disable |= dpp::i_message_content;
-                }
-                else
-                {
-                    cluster->on_message_create.attach(message_create_event);
+
+                    // disable on_message_create to prevent log spam
+                    std::shared_lock _(cluster->module_commands_mutex_);
+                    for (auto& command : cluster->module_commands_)
+                    {
+                        if (command.type == dpp::ctxm_chat_input)
+                        {
+                            cluster->on_message_create.detach(command.event_handles[1]);
+                        }
+                    }
                 }
 
                 // shards that have already started will be stuck in a reconnect loop if we don't fix their intents
@@ -397,55 +460,98 @@ namespace fixedphilip::discord
         });
     }
 
-    bot::bot(const std::string& token, const settings& settings, uint32_t intents, uint32_t shards, uint32_t cluster_id, 
+    bot::bot(const std::string& token, const bot_settings& settings, uint32_t intents, uint32_t shards, uint32_t cluster_id, 
         uint32_t maxclusters, bool compressed, dpp::cache_policy_t policy, uint32_t pool_threads) 
-        : dpp::cluster(token, intents, shards, cluster_id, maxclusters, compressed, policy, pool_threads)
+        : dpp::cluster(token, intents, shards, cluster_id, maxclusters, compressed, policy, pool_threads), settings_(settings)
     {
-        settings_ = settings;
-
-        // attach our own events first (modules do it in their inits)
+        // attach our own events first (modules do it in their own inits, but we do their commands ourselves later)
         on_log.attach(log_event);
         on_ready.attach(ready_event);
-        // message_create_event is attached to on_message_create in fetch_app_info_async
 
+        // we're doing this here instead of on_ready_init because we want this to run as soon as possible
+        // to ideally avoid restarting clusters/shards after potentially fixing up their intents
         fetch_app_info_async();
 
+        bool first_module = true;
+        std::string result_log = "";
+
         // initialize modules alphabetically by their name
+        // their commands are created in on_ready_init
         auto iter = fixedphilip::discord::bot::module::first();
         while (iter)
         {
             if (iter->init(*this))
             {
+                auto name = std::string(iter->name());
+                if (first_module)
+                {
+                    result_log += ": '" + name + "'";
+                }
+                else
+                {
+                    result_log += ", '" + name + "'";
+                }
+                first_module = false;
                 loaded_modules_.push_back(iter);
             }
             iter = iter->next();
         }
+
+        log(dpp::ll_info, std::format("Loaded {} module{}{}", loaded_modules_.size(), loaded_modules_.size() == 1 ? "" : "s", result_log));
     }
 
     bot::~bot()
     {
         // destroy loaded modules in reverse order of initialization
-        auto iter = fixedphilip::discord::bot::module::last();
-        while (iter)
+        for (auto& loaded_module : std::views::reverse(loaded_modules_))
         {
-            if (loaded_modules_.empty())
-            {
-                return;
-            }
-            auto last_loaded_module = loaded_modules_.back();
-            if (iter == last_loaded_module)
-            {
-                loaded_modules_.pop_back();
-                iter->destroy(*this);
-            }
-            iter = iter->previous();
+            loaded_module->destroy(*this);
+        }
+    }
+
+    dpp::snowflake bot::slash_command_snowflake(const std::string& slash_command)
+    {
+        auto module_command = std::find_if(module_commands_.begin(), module_commands_.end(), [&slash_command](const bot::module_command& other)
+        {
+            return other.name == slash_command && other.type == dpp::ctxm_chat_input;
+        });
+        if (module_command == module_commands_.end())
+        {
+            return dpp::snowflake();
+        }
+        return module_command->id;
+    }
+
+    bool bot::add_module(module* module_to_add)
+    {
+        if (!ready_init_done_)
+        {
+            // too early to add modules
+            return false;
         }
 
-        // todo race cond?
-        for (auto& module_command : module_commands)
+        if (!module_to_add->init(*this))
         {
-            unregister_command(module_command.name);
+            // module itself did not want to be added
+            return false;
         }
+
+        loaded_modules_.insert(std::lower_bound(loaded_modules_.begin(), loaded_modules_.end(), module_to_add, [](const module* a, const module* b) { return strcmp(a->name(), b->name()) < 0; }), module_to_add);
+        create_commands_async();
+        return true;
+    }
+
+    bool bot::remove_module(module* module_to_add)
+    {
+        auto it = std::find(loaded_modules_.begin(), loaded_modules_.end(), module_to_add);
+        if (it == loaded_modules_.end())
+        {
+            // module not loaded
+            return false;
+        }
+        module_to_add->destroy(*this);
+        loaded_modules_.erase(it);
+        return true;
     }
 
     dpp::task<bot::counts> bot::co_get_counts()

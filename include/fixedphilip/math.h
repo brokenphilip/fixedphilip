@@ -169,8 +169,8 @@ namespace fixedphilip::math
                     { "cm²", { "sq.cm", "sqcm", "cm2", "cm^2"/*, "square centimeter", "square centimeters", "square centimetre", "square centimetres"*/ }, divide<10'000.0>, multiply<10'000.0> },
                     { "dm²", { "sq.dm", "sqdm", "dm2", "dm^2"/*, "square decimeter", "square decimeters", "square decimetre", "square decimetres"*/ }, centi_to_base, base_to_centi },
                     { "m²", { "sq.m", "sqm", "m2", "m^2"/*, "square meter", "square meters", "square metre", "square metres"*/ } },
-                    { "a", { "a", "are" }, multiply<100.0>, divide<100.0> }
-                    { "ha", { "ha", "hectare" }, multiply<10'000.0>, divide<10'000.0> }
+                    { "a", { "a", "are" }, multiply<100.0>, divide<100.0> },
+                    { "ha", { "ha", "hectare" }, multiply<10'000.0>, divide<10'000.0> },
                     { "km²", { "sq.km", "sqkm", "km2", "km^2"/*, "square kilometer", "square kilometers", "square kilometre", "square kilometres"*/ }, mega_to_base, base_to_mega },
 
                     { "in²", { "sq.in", "sqin", "in2", "in^2"/*, "square inch", "square inches"*/ }, multiply<0.00064516>, divide<0.00064516> },

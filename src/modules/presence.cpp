@@ -110,32 +110,26 @@ namespace fixedphilip
 		};
 
 		presence_module::config config;
-		std::shared_mutex config_mutex;
+		//std::shared_mutex config_mutex;
 		dpp::timer timer;
 
 		void update_presence(fixedphilip::discord::bot& bot)
 		{
-			std::string prefix = "";
-			{
-				std::shared_lock _(bot.get_settings_mutex());
-				prefix = bot.get_settings().prefix;
-			}
-
 			const std::vector<std::pair<std::string, std::string>> token_conversion
 			{
-				{ "%prefix%", prefix },
+				{ "%prefix%", bot.settings().prefix },
 				{ "%version%", std::to_string(FIXEDPHILIP_BUILD_VERSION_NUM) },
 			};
 
-			std::string activity;
-			dpp::presence_status status;
-			dpp::activity_type type;
-			{
-				std::shared_lock _(config_mutex);
-				activity = config.activity;
-				status = config.status;
-				type = config.activity_type;
-			}
+			std::string activity = config.activity;
+			dpp::presence_status status = config.status;
+			dpp::activity_type type = config.activity_type;
+			//{
+			//	std::shared_lock _(config_mutex);
+			//	activity = config.activity;
+			//	status = config.status;
+			//	type = config.activity_type;
+			//}
 
 			for (int i = 0; i < token_conversion.size(); i++)
 			{
@@ -148,11 +142,11 @@ namespace fixedphilip
 		{
 			update_presence(bot);
 
-			int update_rate_mins = -1;
-			{
-				std::shared_lock _(config_mutex);
-				update_rate_mins = config.update_rate_mins;
-			}
+			int update_rate_mins = config.update_rate_mins;
+			//{
+			//	std::shared_lock _(config_mutex);
+			//	update_rate_mins = config.update_rate_mins;
+			//}
 			if (update_rate_mins > 0)
 			{
 				timer = bot.start_timer([this, &bot](const dpp::timer& timer) -> dpp::task<void>
@@ -195,7 +189,7 @@ namespace fixedphilip
 		virtual bool init(fixedphilip::discord::bot& bot) override final
 		{
 			{
-				std::unique_lock _(config_mutex);
+				//std::unique_lock _(config_mutex);
 
 				fixedphilip::file::settings config_settings
 				{
@@ -204,7 +198,7 @@ namespace fixedphilip
 					.log = true,
 				};
 
-				auto result = config_.load(config_settings);
+				auto result = config.load(config_settings);
 				if (result != fixedphilip::file::r_success && result != fixedphilip::file::r_file_not_found)
 				{
 					return false;
@@ -216,35 +210,18 @@ namespace fixedphilip
 
 		virtual void destroy(fixedphilip::discord::bot& bot) override final
 		{
-			presence_module* presence = nullptr;
-			for (auto& module : bot.loaded_modules())
-			{
-				if (std::string("presence") == module->name())
-				{
-					presence = static_cast<presence_module*>(module);
-					break;
-				}
-			}
-			if (!presence)
-			{
-				bot.log(dpp::ll_error, "presence_module::destroy: presence module was null");
-				return;
-			}
-
-			int update_rate_mins = -1;
-			{
-				std::shared_lock _(config_mutex);
-				update_rate_mins = config_.update_rate_mins;
-			}
+			int update_rate_mins = config.update_rate_mins;
+			//{
+			//	std::shared_lock _(config_mutex);
+			//	update_rate_mins = config.update_rate_mins;
+			//}
 			if (update_rate_mins > 0)
 			{
-				bot.stop_timer(presence->timer);
+				bot.stop_timer(timer);
 			}
 		}
-
 	public:
 		presence_module() : fixedphilip::discord::bot::module("presence", "Manages the bot's activity/status presence") {}
 	};
-
-	static presence_module presence_module_;
+	static presence_module instance;
 }

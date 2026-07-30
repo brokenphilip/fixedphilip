@@ -17,35 +17,36 @@
 
 namespace fixedphilip::discord
 {
+	// Settings stored and used inside each fixedphilip bot/cluster
+	// These settings can be loaded from and saved to a config file, see the config struct below
+	// Modify this data structure to add new settings to the config/bot classes
+	struct bot_settings
+	{
+		// Chat prefix for old-style commands (can be set to blank to disable)
+		std::string prefix = "fp!";
+
+		// List of disabled modules by name
+		// Each name accepts one wildcard ('*')
+		std::vector<std::string> disabled_modules = {};
+	};
+
 	// The base of a fixedphilip bot/cluster, expanded to support:
 	// - Modules
 	// -
 	class bot : public dpp::cluster
 	{
 	public:
-		// Settings stored and used inside each fixedphilip bot/cluster
-		// These settings can be loaded from and saved to a config file, see the config struct below
-		// Modify this data structure to add new settings to the config/bot classes
-		struct settings
-		{
-			// Chat prefix for old-style commands (can be set to blank to disable)
-			std::string prefix = "fp!";
-
-			// List of disabled modules by name
-			// Each name accepts one wildcard ('*')
-			std::vector<std::string> disabled_modules = {};
-		};
-
 		// Configuration file structure which can be used to load fixedphilip bot/cluster settings
 		struct config : public fixedphilip::file::json_pretty_print
 		{
 			std::string token = FIXEDPHILIP_DEFAULT_TOKEN;
-			bot::settings settings;
+			bot_settings settings;
 
 			virtual nlohmann::json struct_to_json() override final;
 			virtual bool json_to_struct(const nlohmann::json& data) override final;
 
-			//
+			// Use this instead of load() to load the config
+			// If it returns true, proceed with instantiating the bot
 			bool load_from_file(const std::string& filename);
 		};
 
@@ -58,10 +59,14 @@ namespace fixedphilip::discord
 		{
 		public:
 			// check cormands.txt it woul be very cool i tink
-			struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t>
+			struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t, dpp::message_context_menu_t, dpp::user_context_menu_t>
 			{
 				inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
 				inline auto get_message_create() const { return std::get_if<dpp::message_create_t>(this); }
+				inline auto get_message_context_menu() const { return std::get_if<dpp::message_context_menu_t>(this); }
+				inline auto get_user_context_menu() const { return std::get_if<dpp::user_context_menu_t>(this); }
+
+				const dpp::interaction_create_t* get_interaction_create() const;
 
 				const dpp::event_dispatch_t& event_dispatch() const;
 
@@ -120,58 +125,69 @@ namespace fixedphilip::discord
 			inline auto description() { return description_; }
 		};
 	private:
+		// Constructed on startup and read-only - no need for a mutex
+		bot_settings settings_;
+
+		// Constructed on startup and read-only - no need for a mutex
 		fixedphilip::utils::time::raii_stopwatch bot_uptime_;
 		std::chrono::system_clock::time_point bot_start_time_ = std::chrono::system_clock::now();
 
 		std::vector<module*> loaded_modules_;
 		std::shared_mutex loaded_modules_mutex_;
 
-		std::vector<command> module_commands_;
-		//std::shared_mutex module_commands_mutex_;
-
-		bot::settings settings_;
-		std::shared_mutex settings_mutex_;
+		struct module_command : public command
+		{
+			dpp::event_handle event_handles[2] { SIZE_MAX };
+			
+			inline module_command(const command& cmd) : command(cmd) {}
+		};
+		std::vector<module_command> module_commands_;
+		std::shared_mutex module_commands_mutex_;
 
 		dpp::user app_owner_;
 		std::shared_mutex app_owner_mutex_;
 
-		std::unordered_map<std::string, dpp::snowflake> slash_command_snowflakes_;
-		std::shared_mutex slash_command_snowflakes_mutex_;
+		std::atomic_bool ready_init_done_ = false;
 
 		static void logger(const dpp::log_t&);
 
 		template <typename T>
 		using event_t = dpp::task<void>(const T& event);
 		static event_t<dpp::log_t> log_event;
-		static event_t<dpp::message_create_t> message_create_event;
 		static event_t<dpp::ready_t> ready_event;
 
-		void create_commands();
-
+		void create_commands_async();
 		void fetch_app_info_async();
 	public:
-		bot(const std::string& token, const settings& settings, uint32_t intents = dpp::i_default_intents,
+		bot(const std::string& token, const bot_settings& settings, uint32_t intents = dpp::i_default_intents,
 			uint32_t shards = 0, uint32_t cluster_id = 0, uint32_t maxclusters = 1, bool compressed = true,
 			dpp::cache_policy_t policy = dpp::cache_policy::cpol_default, uint32_t pool_threads = std::thread::hardware_concurrency() / 2);
 
 		virtual ~bot();
 
+		// Returns a copy of the list of loaded modules
+		// Should you decide to modify a loaded module, you are responsible for its thread safety
 		inline auto loaded_modules()
 			{ std::shared_lock _(loaded_modules_mutex_); return loaded_modules_; }
 
-		// Returns the bot's settings. Make sure to lock its mutex before reading/writing
-		inline auto& settings() { return settings_; }
-
-		// Returns the bot's settings mutex. Use shared_lock for reads and unique_lock for writes
-		inline auto& settings_mutex() { return settings_mutex; }
+		// Returns a copy of the bot's settings
+		inline auto settings() { return settings_; }
 
 		// Returns a copy of the dpp::user who owns this app/instance
 		inline auto app_owner() 
-			{ std::shared_lock _(app_owner_mutex); return app_owner_; }
+			{ std::shared_lock _(app_owner_mutex_); return app_owner_; }
 
-		// Given a slash command, returns its snowflake
-		inline auto slash_command_snowflake(const std::string& slash_command) 
-			{ std::shared_lock _(slash_command_snowflakes_mutex); return slash_command_snowflakes[slash_command]; }
+		// Given a slash command name, returns its snowflake
+		// Only works for CHAT_INPUT commands (context menu commands will not work)
+		dpp::snowflake slash_command_snowflake(const std::string& slash_command);
+
+		// Add (late-load) a module to the bot - returns true on success
+		// Returns false if too early (must be after on_ready_init) or if the module failed to load
+		bool add_module(module* module_to_add);
+
+		// Remove (early-unload) a module from the bot - returns true on success
+		// Returns false if this module is not loaded
+		bool remove_module(module* module_to_remove);
 
 		// Server and user counts, for the servers the bot is currently in, as well as all the (guild and user install) users it can see
 		struct counts
@@ -198,13 +214,13 @@ namespace fixedphilip::discord
 	template <typename T>
 	const T* get_if(const std::string& log_prefix, const dpp::confirmation_callback_t& result)
 	{
+		auto cluster = result.bot;
 		if (result.is_error())
 		{
 			auto error = std::format("{}: {}", log_prefix, result.get_error().human_readable);
-			auto cluster = result.bot;
 			if (cluster)
 			{
-				result.bot->log(dpp::ll_error, error);
+				cluster->log(dpp::ll_error, error);
 			}
 			else
 			{
@@ -220,7 +236,6 @@ namespace fixedphilip::discord
 
 		// TODO: is this unreachable?
 		auto error = std::format("{}: unknown error (wrong result.value type)", log_prefix);
-		auto cluster = result.bot;
 		if (cluster)
 		{
 			result.bot->log(dpp::ll_error, error);
