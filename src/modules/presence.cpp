@@ -61,7 +61,7 @@ namespace fixedphilip
 			virtual bool json_to_struct(const nlohmann::json& data) override final
 			{
 				std::string status_string;
-				if (try_at(data, "status", status_string))
+				if (fixedphilip::file::json_try_at(data, "status", status_string))
 				{
 					auto it = std::find_if(status_to_string.begin(), status_to_string.end(), [&status_string](const auto& pair)
 					{
@@ -78,7 +78,7 @@ namespace fixedphilip
 				}
 
 				std::string activity_string;
-				if (try_at(data, "activity", activity_string))
+				if (fixedphilip::file::json_try_at(data, "activity", activity_string))
 				{
 					auto it = std::find_if(activity_to_string.begin(), activity_to_string.end(), [&activity_string](const auto& pair)
 					{
@@ -98,7 +98,7 @@ namespace fixedphilip
 					}
 				}
 
-				if (try_at(data, "update_rate_mins", update_rate_mins) && update_rate_mins < 0)
+				if (fixedphilip::file::json_try_at(data, "update_rate_mins", update_rate_mins) && update_rate_mins < 0)
 				{
 					fixedphilip::log::error("'update_rate_mins' is out of bounds - reverting to default");
 					update_rate_mins = 5;

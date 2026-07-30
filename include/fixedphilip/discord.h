@@ -12,7 +12,6 @@
 
 #include <variant>
 
-
 #define FIXEDPHILIP_DEFAULT_TOKEN "your_bot_token_here"
 
 namespace fixedphilip::discord
@@ -28,6 +27,23 @@ namespace fixedphilip::discord
 		// List of disabled modules by name
 		// Each name accepts one wildcard ('*')
 		std::vector<std::string> disabled_modules = {};
+
+		inline nlohmann::json struct_to_json()
+		{
+			return
+			{
+				{ "prefix", prefix },
+				{ "disabled_modules", disabled_modules },
+			};
+		}
+
+		inline bool json_to_struct(const nlohmann::json& data)
+		{
+			fixedphilip::file::json_try_at(data, "prefix", prefix);
+			fixedphilip::file::json_try_at(data, "disabled_modules", disabled_modules);
+
+			return true;
+		}
 	};
 
 	// The base of a fixedphilip bot/cluster, expanded to support:
@@ -182,7 +198,8 @@ namespace fixedphilip::discord
 		dpp::snowflake slash_command_snowflake(const std::string& slash_command);
 
 		// Add (late-load) a module to the bot - returns true on success
-		// Returns false if too early (must be after on_ready_init) or if the module failed to load
+		// Returns false if called too early (must be after on_ready_init)
+		// Also returns false if the module failed to load or is disabled by config/settings file
 		bool add_module(module* module_to_add);
 
 		// Remove (early-unload) a module from the bot - returns true on success

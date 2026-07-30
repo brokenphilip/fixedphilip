@@ -66,23 +66,6 @@ namespace fixedphilip::file
 	template <int indent = -1, char indent_char = ' '>
 	struct json : public base
 	{
-		// Helper wrapper function for json.at() with logging output
-		// Returns true if json.at() was successful, false otherwise
-		template <typename T>
-		static bool try_at(const nlohmann::json& data, const std::string& key, T& member_variable)
-		{
-			try
-			{
-				member_variable = data.at(key);
-				return true;
-			}
-			catch (const std::exception& e)
-			{
-				fixedphilip::log::error(std::format("Exception reading '{}' json key: {}", key, e.what()));
-				return false;
-			}
-		}
-
 		// Use this function to convert your data structure to a json, which will be written to a file
 		virtual nlohmann::json struct_to_json() = 0;
 
@@ -113,4 +96,21 @@ namespace fixedphilip::file
 	// An extension of the base file structure, which saves pretty-printed json data to a file
 	// If you're looking for something more compact, use 
 	using json_pretty_print = json<4, ' '>;
+
+	// Helper wrapper function for json.at() with logging output
+	// Returns true if json.at() was successful, false otherwise
+	template <typename T>
+	bool json_try_at(const nlohmann::json& data, const std::string& key, T& member_variable)
+	{
+		try
+		{
+			member_variable = data.at(key);
+			return true;
+		}
+		catch (const std::exception& e)
+		{
+			fixedphilip::log::error(std::format("Exception reading '{}' json key: {}", key, e.what()));
+			return false;
+		}
+	}
 }

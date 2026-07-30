@@ -9,20 +9,20 @@ namespace fixedphilip::discord
 {
     nlohmann::json bot::config::struct_to_json()
     {
-        return
+        nlohmann::json data
         {
             { "token", token },
-            { "prefix", settings.prefix },
         };
+        data.update(settings.struct_to_json());
+        return data;
     }
 
     bool bot::config::json_to_struct(const nlohmann::json& data)
     {
-        try_at(data, "token", token);
-        try_at(data, "prefix", settings.prefix);
-
-        // partial load is fine
-        return true;
+        auto data_copy = data;
+        fixedphilip::file::json_try_at(data_copy, "token", token);
+        data_copy.erase("token");
+        return settings.json_to_struct(data_copy);
     }
 
     bool bot::config::load_from_file(const std::string& filename)
@@ -60,6 +60,32 @@ namespace fixedphilip::discord
         {
             fixedphilip::log::info(std::format("Global prefix for old-style commands set to '{}'", settings.prefix));
         }
+
+        if (settings.disabled_modules.empty())
+        {
+            fixedphilip::log::info("No modules will be disabled");
+        }
+        else
+        {
+            std::string result_log = std::format("If existing and enabled, {} module{} will be disabled", settings.disabled_modules.size(), settings.disabled_modules.size() == 1 ? "" : "s");
+            bool first_module = true;
+            for (auto& module : settings.disabled_modules)
+            {
+                if (first_module)
+                {
+                    result_log += ": '" + module + "'";
+                }
+                else
+                {
+                    result_log += ", '" + module + "'";
+                }
+                first_module = false;
+            }
+            fixedphilip::log::info(result_log);
+        }
+
+        // using this opportunity to add any new keys that might not exist
+        save(config_settings);
         return true;
     }
 
@@ -478,24 +504,31 @@ namespace fixedphilip::discord
         // initialize modules alphabetically by their name
         // their commands are created in on_ready_init
         auto iter = fixedphilip::discord::bot::module::first();
-        while (iter)
+        do
         {
-            if (iter->init(*this))
+            std::string name = iter->name();
+            if (std::find(settings_.disabled_modules.begin(), settings_.disabled_modules.end(), name) != settings_.disabled_modules.end())
             {
-                auto name = std::string(iter->name());
-                if (first_module)
-                {
-                    result_log += ": '" + name + "'";
-                }
-                else
-                {
-                    result_log += ", '" + name + "'";
-                }
-                first_module = false;
-                loaded_modules_.push_back(iter);
+                continue;
             }
-            iter = iter->next();
-        }
+
+            if (!iter->init(*this))
+            {
+                continue;
+            }
+
+            if (first_module)
+            {
+                result_log += ": '" + name + "'";
+            }
+            else
+            {
+                result_log += ", '" + name + "'";
+            }
+            first_module = false;
+            loaded_modules_.push_back(iter);
+        } 
+        while (iter = iter->next());
 
         log(dpp::ll_info, std::format("Loaded {} module{}{}", loaded_modules_.size(), loaded_modules_.size() == 1 ? "" : "s", result_log));
     }
@@ -527,6 +560,12 @@ namespace fixedphilip::discord
         if (!ready_init_done_)
         {
             // too early to add modules
+            return false;
+        }
+
+        if (std::find(settings_.disabled_modules.begin(), settings_.disabled_modules.end(), module_to_add->name()) != settings_.disabled_modules.end())
+        {
+            // module disabled by config
             return false;
         }
 
