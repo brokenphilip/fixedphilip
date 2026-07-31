@@ -279,3 +279,6 @@ namespace fixedphilip::discord
     static example_module instance;
 }
 ```
+In the following image, you can see the example module in action:
+
+<img width="361" height="470" alt="image" src="https://github.com/user-attachments/assets/3df93029-bc1a-4007-8bcc-52bc1fa43849" />
