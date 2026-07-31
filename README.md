@@ -11,7 +11,7 @@ The project is configured to build for (and run on) Windows and ARM64 using the 
 
 Some of fixedphilip's most notable features include:
 - Detailed `/status` command with uptime, statistics, machine resource usage* and other info
-- Conversion between some measurable units (temperature, speed, others*) and all currencies using `/convert`
+- Conversion between most measurable units and all currencies using `/convert`
 - Information and notifications/subscriptions (on a municipality, settlement or street level) regarding planned power outages in Serbia using `/eds`*
 - Advanced `/remind`er management*
 - Full-fledged module system, making it easy for developers to create and manage fixedphilip feature sets

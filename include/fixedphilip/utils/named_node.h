@@ -4,6 +4,7 @@
 
 namespace fixedphilip::utils
 {
+	// Linked list node sorted alphabetically by name
 	template <typename T>
 	class named_node
 	{

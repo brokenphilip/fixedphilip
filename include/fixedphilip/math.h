@@ -12,7 +12,7 @@
 
 namespace fixedphilip::math
 {
-    // NOTE: a lot of functions rely on number_t being double, needs to be cleaned up
+    // TODO: a lot of functions rely on number_t being double, should clean up maybe?
 	using number_t = double;
 	using conversion_fn = std::function<number_t(number_t)>;
 

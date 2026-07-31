@@ -25,9 +25,10 @@ namespace fixedphilip::discord
 		std::string prefix = "fp!";
 
 		// List of disabled modules by name
-		// Each name accepts one wildcard ('*')
+		// Accepts wildcards ('*') - todo
 		std::vector<std::string> disabled_modules = {};
 
+		// Modify this function to return json data of this structure
 		inline nlohmann::json struct_to_json()
 		{
 			return
@@ -37,6 +38,7 @@ namespace fixedphilip::discord
 			};
 		}
 
+		// Modify this function to read structure data from json
 		inline bool json_to_struct(const nlohmann::json& data)
 		{
 			fixedphilip::file::json_try_at(data, "prefix", prefix);
@@ -46,9 +48,9 @@ namespace fixedphilip::discord
 		}
 	};
 
-	// The base of a fixedphilip bot/cluster, expanded to support:
-	// - Modules
-	// -
+	// The base of a fixedphilip bot/cluster, expanded to support
+	// - Modules and their commands
+	// - Additional info such as settings, instance owner, etc...
 	class bot : public dpp::cluster
 	{
 	public:
@@ -74,7 +76,6 @@ namespace fixedphilip::discord
 		class command : public dpp::slashcommand
 		{
 		public:
-			// check cormands.txt it woul be very cool i tink
 			struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t, dpp::message_context_menu_t, dpp::user_context_menu_t>
 			{
 				bot* get_bot() const;
@@ -84,8 +85,10 @@ namespace fixedphilip::discord
 				inline auto get_message_context_menu() const { return std::get_if<dpp::message_context_menu_t>(this); }
 				inline auto get_user_context_menu() const { return std::get_if<dpp::user_context_menu_t>(this); }
 
+				// For any type of slash command (ie. excluding old-style commands), get the underlying interaction event
 				const dpp::interaction_create_t* get_interaction_create() const;
 
+				// For any type of command (including old-style commands), get the underlying event dispatch
 				const dpp::event_dispatch_t& event_dispatch() const;
 
 				void reply(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const;
@@ -94,14 +97,22 @@ namespace fixedphilip::discord
 				dpp::async<dpp::confirmation_callback_t> co_reply(const dpp::message& msg) const;
 				inline dpp::async<dpp::confirmation_callback_t> co_reply(const std::string& msg) const { return co_reply(dpp::message(msg)); }
 
+				// Remember to use thinking_end() instead of reply() after using thinking_start()
+				// Additionally, if using the coroutine, make sure to co_await its response first
 				void thinking_start() const;
 				dpp::async<dpp::confirmation_callback_t> co_thinking_start() const;
 
 				void thinking_end(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const;
 				inline void thinking_end(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { thinking_end(dpp::message(msg), callback); }
 
+				// For old-style commands, reply to the user that they should instead use the slash command
+				// For "CHAT_INPUT" commands, reply to the user that they should instead use the old-style command
+				// If old-style commands are disabled, the user simply gets a "not implemented" reply instead
+				// This function is not supported for "MESSAGE" and "USER" commands
 				void reply_not_impl_use_other() const;
 
+				// Given a command parameter name, try to fetch the command parameter value
+				// Returns the value if found, or default_value otherwise
 				template <typename T>
 				T try_get_command_parameter(const std::string& param_name, T default_value) const
 				{
@@ -143,7 +154,7 @@ namespace fixedphilip::discord
 			}
 		};
 
-		//
+		// Base module interface - inherit this class to create your own custom module
 		class module : public fixedphilip::utils::named_node<module>
 		{
 			// TODO: command which lists all modules, active and inactive
@@ -208,8 +219,7 @@ namespace fixedphilip::discord
 
 		// Returns a copy of the list of loaded modules
 		// Should you decide to modify a loaded module, you are responsible for its thread safety
-		inline auto loaded_modules()
-			{ std::shared_lock _(loaded_modules_mutex_); return loaded_modules_; }
+		inline auto loaded_modules() { std::shared_lock _(loaded_modules_mutex_); return loaded_modules_; }
 
 		// Given a slash command name, returns its snowflake
 		// Only works for CHAT_INPUT commands (context menu commands will not work)
@@ -225,10 +235,7 @@ namespace fixedphilip::discord
 		bool remove_module(module* module_to_remove);
 
 		// Returns a copy of the dpp::user who owns this app/instance
-		inline auto app_owner()
-		{
-			std::shared_lock _(app_owner_mutex_); return app_owner_;
-		}
+		inline auto app_owner() { std::shared_lock _(app_owner_mutex_); return app_owner_; }
 
 		// Server and user counts, for the servers the bot is currently in, as well as all the (guild and user install) users it can see
 		struct counts

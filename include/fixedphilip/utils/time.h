@@ -76,12 +76,6 @@ namespace fixedphilip::utils::time
 		inline bool running() const { return true; }
 	};
 
-	// How long this executable has been running for
-	//const inline raii_stopwatch executable_uptime;
-
-	// Time point when the executable started
-	//const inline auto executable_start = std::chrono::system_clock::now();
-
 	// Use this function to run code within an if() statement only when enough time has passed
 	// T can be any unique 'tag' identifier name, eg. "struct any_unique_name_you_like_here"
 	// Returns true once "duration" has passed since the previous successful function call
