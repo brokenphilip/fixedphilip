@@ -130,13 +130,80 @@ Proceed to setup and run fixedphilip as explained above.
 
 ## Development
 While there is no official documentation, most header file functions and data structures are either self-explanatory or documented via comments.
+### Creating modules
+Adding new features to fixedphilip is done by creating modules. Each module's source file is located under `src/modules/*.cpp`, and is usually named after the module. This ensures each command is its own separated compilation unit that can be freely disabled at any time.
+
+
 ### Creating commands
 Adding new features to fixedphilip is done by creating commands. Each command's source file is located under `src/commands/*.cpp`, and is usually named after the command. This ensures each command is its own separate compile unit that can be freely disabled at any time.
 ```cpp
-#include <fixedphilip/command.h>
+// This include file contains all the necessary data structures to create a fixedphilip module
+#include <fixedphilip/discord.h>
 
-namespace fixedphilip::commands::example
+// Can be anything, really, so long as it's ideally not in the global namespace
+namespace fixedphilip
 {
+    // Al
+    class example_module : public fixedphilip::discord::bot::module
+    {
+        // This function is called when the "/test" command is being executed by a (non-bot) user
+        // Depending on the type of your command, "run_event" is a variant that can be one of either:
+        // - "dpp::slashcommand_t" or "dpp::message_create_t" if your command is "dpp::ctxm_chat_input" (CHAT_INPUT)
+		//   - These are the default chat-based slash commands, which also work with old-style (chat prefix) commands
+		//   - Slash command provide the former, old-style commands provide the latter (unless they're disabled)
+        // - "dpp::message_context_menu_t" if your command is "dpp::ctxm_message" (MESSAGE)
+		//   - These are context-menu ("right click") application "commands" you can perform on messages
+        // - "dpp::user_context_menu_t" if your command is "dpp::ctxm_user" (USER)
+		//   - These are context-menu ("right click") application "commands" you can perform on users
+		// The "run_event" also provides variant-agnostic helper functions, such as reply(...)
+        // For more information on what the "run_event" can do, check the included discord header file
+        static dpp::task<void> run_test(const fixedphilip::discord::bot::command::run_event& event)
+        {
+		    event.reply("Hello world! :3");
+            co_return;
+		}
+
+        // This function is called when a fixedphilip::discord::bot is being created
+        // Alternatively, this function is also called when it is being late-loaded using bot::add_module()
+		// Note that modules can be disabled using "disabled_modules" from config.json
+        // Modules are initialized in alphabetical order based on their name
+        virtual bool init(fixedphilip::discord::bot& bot) override final
+		{
+            // Your module initialization goes here...
+            // Return false if something goes wrong, to prevent your module from being loaded
+			// By default, this virtual function just returns true - if you're doing the same, you don't need to override it
+            return true;
+        }
+
+        // This function is called when a fixedphilip::discord::bot is requesting all loaded modules' commands
+		// This usually happens a short while after init() - more specifically, in the bot's initial on_ready event
+        // For late-loaded commands using bot::add_module(), this function is called right after init()
+        virtual std::vector<fixedphilip::discord::bot::command> commands(fixedphilip::discord::bot& bot) override final
+        {
+            fixedphilip::discord::bot::command test("test", "Test example command", bot.me.id, run_test);
+
+			// If your module requires multiple commands, you'd add them to the initializer list return here
+            return { test };
+        }
+
+        // This function is called when a fixedphilip::discord::bot is being destroyed
+        // Alternatively, this function is also called when it is being early-unloaded using bot::remove_module()
+        // Modules are destroyed in reverse-alphabetical order based on their name
+		virtual void destroy(fixedphilip::discord::bot& bot) override final
+		{
+            // By default, this virtual function does nothing - if you don't need it, you don't need to override it
+		}
+
+    public:
+		example_module() : fixedphilip::discord::bot::module("example", "This is the example module's description") {}
+    };
+    // Modules are, by design, meant to be single-instance
+    // When a module is being instantiated, it gets added to the internal alphabetically-sorted linked list of modules
+    // This linked list is iterated for each fixedphilip::discord::bot during construction
+    static example_module instance;
+}
+```
+    }
     // This callback runs when the command is being created/initialized, right before it's registered
     // Return true if initialization was successful and register the command, false otherwise
     dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
