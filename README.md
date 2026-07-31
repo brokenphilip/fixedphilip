@@ -132,85 +132,146 @@ Proceed to setup and run fixedphilip as explained above.
 While there is no official documentation, most header file functions and data structures are either self-explanatory or documented via comments.
 ### Creating modules
 Adding new features to fixedphilip is done by creating modules. Each module's source file is located under `src/modules/*.cpp`, and is usually named after the module. This ensures each command is its own separated compilation unit that can be freely disabled at any time.
-
-
-### Creating commands
-Adding new features to fixedphilip is done by creating commands. Each command's source file is located under `src/commands/*.cpp`, and is usually named after the command. This ensures each command is its own separate compile unit that can be freely disabled at any time.
 ```cpp
 // This include file contains all the necessary data structures to create a fixedphilip module
+// Feel free to include whatever else you may need from this project, or any other library
 #include <fixedphilip/discord.h>
 
-// Can be anything really, so long as it's ideally not in the global namespace
-namespace fixedphilip
+// The namespace can be anything really, so long as we're not polluting the global one
+// To avoid writing word salad types, and for consistency sake, it's best to use this namespace
+namespace fixedphilip::discord
 {
-    // Each module should inherit from the base class, as it is pretty useless on its own
-	// You can name it whatever - this repository, for consistency, names it "<module_name>_module"
-    class example_module : public fixedphilip::discord::bot::module
+    // Each module should inherit from the base class, as the base class is pretty useless on its own
+    // You can name it whatever - this repository, for consistency, names it "<module_name>_module"
+    class example_module : public bot::module
     {
         // This function is called when the "/test" command is being executed by a (non-bot) user
         // Depending on the type of your command, "run_event" is a variant that can be one of either:
-        // - "dpp::slashcommand_t" or "dpp::message_create_t" if your command is "dpp::ctxm_chat_input" (CHAT_INPUT)
-		//   - These are the default chat-based slash commands, which also work with old-style (chat prefix) commands
-		//   - Slash command provide the former, old-style commands provide the latter (unless they're disabled)
-        // - "dpp::message_context_menu_t" if your command is "dpp::ctxm_message" (MESSAGE)
-		//   - These are context-menu ("right click") application "commands" you can perform on messages
-        // - "dpp::user_context_menu_t" if your command is "dpp::ctxm_user" (USER)
-		//   - These are context-menu ("right click") application "commands" you can perform on users
-		// The "run_event" also provides variant-agnostic helper functions, such as reply(...)
+        // 
+        // - "dpp::slashcommand_t" or "dpp::message_create_t" if your command is "dpp::ctxm_chat_input"
+        //   - These are the default chat-based (ie. "CHAT_INPUT") slash commands
+        //   - When created, the bot also listens for old-style (chat prefix) commands (unless disabled)
+        //   - Slash command provide the former, old-style commands provide the latter variant
+        // 
+        // - "dpp::message_context_menu_t" if your command is "dpp::ctxm_message" (ie. "MESSAGE")
+        //   - These are context-menu ("right click") application "commands" you can perform on messages
+        // 
+        // - "dpp::user_context_menu_t" if your command is "dpp::ctxm_user" (ie. "USER")
+        //   - These are context-menu ("right click") application "commands" you can perform on users
+        // 
+        // The "run_event" also provides variant-agnostic helper functions, such as reply(...)
         // For more information on what the "run_event" can do, check the included discord header file
-        static dpp::task<void> run_test(const fixedphilip::discord::bot::command::run_event& event)
+        static dpp::task<void> run_test(const bot::command::run_event& event)
         {
-		    event.reply("Hello world! :3");
+            // Send a reply to the user who issued the command
+            event.reply("Hello world! :3");
 
-			// As this is a coroutine, if you're not co_await-ing any functions, you must specifically write "co_return"
+            // As this is a coroutine, you must specifically write "co_return" instead of "return"
+            // (though, you can omit the "co_return" if you already wrote it (or "co_await") somewhere
             co_return;
-		}
+        }
 
-        // This function is called when a fixedphilip::discord::bot is being created
-        // Alternatively, this function is also called when it is being late-loaded using bot::add_module()
-		// Note that modules can be disabled using "disabled_modules" from config.json
+        // Similarly to the above function, it gets called when the "/ping" command is being executed
+        static dpp::task<void> run_ping(const bot::command::run_event& event)
+        {
+            // Here's an example on how to get the fixedphilip bot (cluster) from the "run_event"
+            auto cluster = event.get_bot();
+            if (!cluster)
+            {
+                // Realistically this should never happen, but just to be on the safe side...
+                // ...oh and to make the IDE happy and not complain about a potential null pointer :)
+                fixedphilip::log::error("run_ping: bot was null");
+                co_return;
+            }
+
+            // If your bot/cluster pointer is valid, instead of calling fixedphilip::log::*()...
+            // ...you should call the bot/cluster's log() instead, for more specific log prints
+            cluster->log(dpp::ll_info, "Running the ping command...");
+
+            // Here's an example on how to get the current module from the bot executing your command
+            // If your module is shared between bots, you must protect your data with mutexes
+            // (if it is static ie. single-instance, or dynamic and added to multiple bots)
+            for (const auto& module : cluster->loaded_modules())
+            {
+                if (std::string("example") == module->name())
+                {
+                    // Access your module's non-static public (or private!) members here
+                }
+            }
+
+            // Here's an example on how to get the user who issued the command
+            dpp::user author;
+            if (auto slash_command = event.get_slash_command())
+            {
+                author = slash_command->command.usr;
+            }
+            if (auto message_create = event.get_message_create())
+            {
+                author = message_create->msg.author;
+            }
+            // Since we know this is a "CHAT_INPUT" command, we only need to check for these 2 variants
+
+            // Send a reply to the user who issued the command, printing their name and the bot's ping
+            event.reply(std::format("Pong! Hey {}, my ping is: {} ms", 
+                author.username, static_cast<int>(cluster->rest_ping * 1000)));
+        }
+
+        // This function is called when a fixedphilip bot is being created
+        // Alternatively, it is also called when the module is being late-loaded using bot::add_module()
         // Modules are initialized in alphabetical order based on their name
-        virtual bool init(fixedphilip::discord::bot& bot) override final
-		{
-            // Your module initialization goes here...
-            // Return false if something goes wrong, to prevent your module from being loaded
-			// By default, this virtual function just returns true - if you're doing the same, you don't need to override it
+        // 
+        // Note that modules can additionally be disabled using "disabled_modules" from config.json
+        // Since this is called during module iteration, avoid creating new (dynamic) modules here
+        virtual bool init(bot& bot) override final
+        {
+            // Your module initialization code goes here...
+            // Return false to prevent your module from being loaded (eg. if something goes wrong)
+            // By default, this virtual function just returns true and doesn't do anything else
+            // If you plan on doing the exact same thing, you don't need to override it
             return true;
         }
 
-        // This function is called when a fixedphilip::discord::bot is requesting all loaded modules' commands
-		// This usually happens a short while after init() - more specifically, in the bot's initial on_ready event
+        // This function is called when a fixedphilip bot is requesting all loaded modules' commands
+        // This usually happens a short while after init() - during the bot's initial on_ready event
         // For late-loaded commands using bot::add_module(), this function is called right after init()
-        virtual std::vector<fixedphilip::discord::bot::command> commands(fixedphilip::discord::bot& bot) override final
+        virtual std::vector<bot::command> commands(bot& bot) override final
         {
-            fixedphilip::discord::bot::command test("test", "Test example command", bot.me.id, run_test);
-			// test.add_option(...).add_option(...);
+            bot::command test("test", "Test example command", bot.me.id, run_test);
+            // test.add_option(...).add_option(...);
 
-			// If your module requires multiple commands, you'd add them to the initializer list return here
-            return { test };
+            bot::command ping("ping", "Get the bot's REST ping", bot.me.id, run_ping);
+            // ping.add_option(...).add_option(...);
+
+            // Return all the commands you've created to the initializer list here
+            return { test, ping };
         }
 
-        // This function is called when a fixedphilip::discord::bot is being destroyed
-        // Alternatively, this function is also called when it is being early-unloaded using bot::remove_module()
+        // This function is called when a fixedphilip bot is being destroyed
+        // Alternatively, it is also called when it is being early-unloaded using bot::remove_module()
         // Modules are destroyed in reverse-alphabetical order based on their name
-		virtual void destroy(fixedphilip::discord::bot& bot) override final
-		{
-            // By default, this virtual function does nothing - if you don't need it, you don't need to override it
-		}
+        virtual void destroy(bot& bot) override final
+        {
+            // By default, this virtual function doesn't do anything
+            // If you don't need to run any code upon destruction, you don't need to override it
+        }
 
-        // Since this module is designed to be single-instance, we fill in the base constructor parameters here
-        // If you make a dynamically allocated module, you'd usually pass this info through your constructor
-		// While it's not illegal for multiple modules to share the same name, it is not recommended
+        // Since this module is designed to be single-instance, we fill in the base parameters here
+        // If you make a dynamically allocated module, you'd pass this info through your constructor
+        // While it's not illegal for multiple modules to share the same name, it is not recommended
     public:
-	    // For consistency and linked list order, this repository practices lowercase module names
-		// You don't have to do this, but be wary that mixing cases will affect the alphabetical order
-		example_module() : fixedphilip::discord::bot::module("example", "This is the example module's description") {}
+        // For consistency (and linked list order), this repository practices lowercase module names
+        // You don't have to do this, but be wary that mixing cases will affect the alphabetical order
+        example_module() : bot::module("example", "This is the example module's description") {}
     };
-    // Modules are, by design, meant to be single-instance, but they don't have to be!
-	// If you plan on making dynamically allocated modules, you can use bot::add_module() and bot::remove_module()
-    // When a module is being instantiated, it gets added to the internal alphabetically-sorted linked list of modules
-    // This linked list is iterated for each fixedphilip bot during construction, where each module gets initialized
-    // Dynamically allocated modules also get added to this internal linked list, but it is basically useless
+
+    // Modules are, by design, usually meant to be single-instance, but they don't have to be!
+    // For dynamically allocated modules, you can use bot::add_module() and bot::remove_module()
+    // 
+    // When a module is being instantiated, it gets added to the internal linked list of modules
+    // For each new fixedphilip bot, this list is iterated and each (static) module gets initialized
+    // 
+    // Dynamically allocated modules also get added to this linked list upon their instantiation...
+    // ...but this will (and should!) practically always happen after it's already been iterated
     static example_module instance;
 }
 ```

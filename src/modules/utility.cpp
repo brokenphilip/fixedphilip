@@ -2,11 +2,11 @@
 #include <fixedphilip/math.h>
 #include <fixedphilip/build.h>
 
-namespace fixedphilip
+namespace fixedphilip::discord
 {
-    class utility_module : public fixedphilip::discord::bot::module
+    class utility_module : public bot::module
     {
-        static dpp::task<void> run_shutdown(const fixedphilip::discord::bot::command::run_event& event)
+        static dpp::task<void> run_shutdown(const bot::command::run_event& event)
         {
             auto cluster = event.get_bot();
             if (!cluster)
@@ -41,7 +41,7 @@ namespace fixedphilip
             }
         }
 
-        static dpp::task<void> run_status(const fixedphilip::discord::bot::command::run_event& event)
+        static dpp::task<void> run_status(const bot::command::run_event& event)
         {
             auto cluster = event.get_bot();
             if (!cluster)
@@ -114,14 +114,14 @@ namespace fixedphilip
             event.thinking_end(msg);
         }
 
-        virtual std::vector<fixedphilip::discord::bot::command> commands(fixedphilip::discord::bot& bot) override final
+        virtual std::vector<bot::command> commands(bot& bot) override final
         {
-            fixedphilip::discord::bot::command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
-            fixedphilip::discord::bot::command status("status", "Displays bot status", bot.me.id, run_status);
+            bot::command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
+            bot::command status("status", "Displays bot status", bot.me.id, run_status);
             return { shutdown, status };
         }
     public:
-        utility_module() : fixedphilip::discord::bot::module("utility", "Provides utility commands for bot management") {}
+        utility_module() : bot::module("utility", "Provides utility commands for bot management") {}
     };
     static utility_module instance;
 }

@@ -4,9 +4,9 @@
 
 #include <fixedphilip/utils/string.h>
 
-namespace fixedphilip
+namespace fixedphilip::discord
 {
-	class presence_module : public fixedphilip::discord::bot::module
+	class presence_module : public bot::module
 	{
 		class config : public fixedphilip::file::json_pretty_print
 		{
@@ -111,9 +111,9 @@ namespace fixedphilip
 
 		presence_module::config config;
 		//std::shared_mutex config_mutex;
-		dpp::timer timer;
+		dpp::timer timer = SIZE_MAX;
 
-		void update_presence(fixedphilip::discord::bot& bot)
+		void update_presence(bot& bot)
 		{
 			const std::vector<std::pair<std::string, std::string>> token_conversion
 			{
@@ -138,7 +138,7 @@ namespace fixedphilip
 			bot.set_presence(dpp::presence(status, type, activity));
 		}
 
-		void init_presence(fixedphilip::discord::bot& bot)
+		void init_presence(bot& bot)
 		{
 			update_presence(bot);
 
@@ -162,7 +162,7 @@ namespace fixedphilip
 		{
 			if (dpp::run_once<struct presence_ready_event_init>())
 			{
-				auto cluster = static_cast<fixedphilip::discord::bot*>(event.owner);
+				auto cluster = static_cast<bot*>(event.owner);
 				if (!cluster)
 				{
 					fixedphilip::log::error("presence_ready_event_init: owner was null");
@@ -186,7 +186,7 @@ namespace fixedphilip
 			}
 		}
 
-		virtual bool init(fixedphilip::discord::bot& bot) override final
+		virtual bool init(bot& bot) override final
 		{
 			{
 				//std::unique_lock _(config_mutex);
@@ -208,7 +208,7 @@ namespace fixedphilip
 			return true;
 		}
 
-		virtual void destroy(fixedphilip::discord::bot& bot) override final
+		virtual void destroy(bot& bot) override final
 		{
 			int update_rate_mins = config.update_rate_mins;
 			//{
@@ -221,7 +221,7 @@ namespace fixedphilip
 			}
 		}
 	public:
-		presence_module() : fixedphilip::discord::bot::module("presence", "Manages the bot's activity/status presence") {}
+		presence_module() : bot::module("presence", "Manages the bot's activity/status presence") {}
 	};
 	static presence_module instance;
 }

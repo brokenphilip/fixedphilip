@@ -1,11 +1,11 @@
 #include <fixedphilip/discord.h>
 #include <fixedphilip/math.h>
 
-namespace fixedphilip
+namespace fixedphilip::discord
 {
-	class math_module : public fixedphilip::discord::bot::module
+	class math_module : public bot::module
 	{
-		static dpp::task<void> run_calculate(const fixedphilip::discord::bot::command::run_event& event)
+		static dpp::task<void> run_calculate(const bot::command::run_event& event)
 		{
             auto cluster = event.get_bot();
             if (!cluster)
@@ -45,7 +45,7 @@ namespace fixedphilip
             }
 		}
 
-		static dpp::task<void> run_convert(const fixedphilip::discord::bot::command::run_event& event)
+		static dpp::task<void> run_convert(const bot::command::run_event& event)
 		{
             auto cluster = event.get_bot();
             if (!cluster)
@@ -140,9 +140,9 @@ namespace fixedphilip
             event.thinking_end(response);
 		}
 
-		virtual std::vector<fixedphilip::discord::bot::command> commands(fixedphilip::discord::bot& bot) override final
+		virtual std::vector<bot::command> commands(bot& bot) override final
 		{
-			fixedphilip::discord::bot::command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate);
+			bot::command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate);
 
 			calculate.add_option(dpp::command_option(dpp::co_string, "expression", "Math expression to calculate", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
@@ -150,7 +150,7 @@ namespace fixedphilip
 					.set_max_value(std::numeric_limits<double>::max_digits10))
 				.add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
-			fixedphilip::discord::bot::command convert("convert", "Convert between units and currencies", bot.me.id, run_convert);
+			bot::command convert("convert", "Convert between units and currencies", bot.me.id, run_convert);
 			convert.add_option(dpp::command_option(dpp::co_string, "value", "Number and units/currencies to convert from", true))
 				.add_option(dpp::command_option(dpp::co_string, "to", "Units/currencies to convert the value to", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
@@ -161,7 +161,7 @@ namespace fixedphilip
 			return { calculate, convert };
 		}
 	public:
-		math_module() : fixedphilip::discord::bot::module("math", "Provides commands for calculation and unit/currency conversion") {}
+		math_module() : bot::module("math", "Provides commands for calculation and unit/currency conversion") {}
 	};
     static math_module instance;
 }
