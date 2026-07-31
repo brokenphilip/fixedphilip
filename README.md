@@ -1,16 +1,16 @@
 # fixedphilip
 <img src="https://raw.githubusercontent.com/brokenphilip/fixedphilip/refs/heads/main/assets/logo_128.png" align="right">
 
-> *"when is brokenphilip getting fixed?!" -several concerned internet residents*
+> *"when is brokenphilip getting fixed?!" -several concerned internet strangers*
 
-fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library. The bot aims to provide a convenient set of features for everyday use, primarily ones not found in (or executed better than) other Discord bots. It is designed to support both modern slash-commands (for guild/server and user installs), as well as optional old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
+fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library. The bot aims to provide a convenient set of unique features for everyday use, and it is designed to support both modern slash-commands (for guild/server and user installs), as well as optional old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
 
 Some of fixedphilip's most notable features include:
 - Detailed `/status` command with uptime, statistics, machine resource usage* and other info
 - Conversion between some measurable units (temperature, speed, others*) and all currencies using `/convert`
 - Information and notifications/subscriptions (on a municipality, settlement or street level) regarding planned power outages in Serbia using `/eds`*
 - Advanced `/remind`er management*
-- Modular command system, making it easier for developers to create and manage fixedphilip features
+- Full-fledged module system, making it easy for developers to create and manage fixedphilip feature sets
 
 > [!NOTE]
 > Asterisk (*) indicates a planned feature.
@@ -20,7 +20,7 @@ Some of fixedphilip's most notable features include:
 > [!IMPORTANT]
 > Currently, the bot is intended for **personal use only**:
 > - I will not be providing a guild/user invite link for my own hosted instance to the general public, and
-> - Feature requests will likely not be considered, unless I could benefit from them myself.
+> - Feature requests may be rejected on a biased, personal use-case basis
 
 ## Setup
 ### ...on Windows
@@ -129,7 +129,7 @@ After building, `rsync` fixedphilip to your target system, to a location (folder
 Proceed to setup and run fixedphilip as explained above.
 
 ## Development
-While there is no official documentation, most header file functions and data structures are either self-explanatory or documented via comments.
+While there is no official documentation, most header file functions and data structures are either self-explanatory or thoroughly documented via comments.
 ### Creating modules
 Adding new features to fixedphilip is done by creating modules. Each module's source file is located under `src/modules/*.cpp`, and is usually named after the module. This ensures each command is its own separated compilation unit that can be freely disabled at any time.
 ```cpp
