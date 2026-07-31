@@ -54,9 +54,29 @@ sudo dpkg -i dpp.deb
 ## Running
 Upon your first launch, it will create a default `config.json`. You must edit this file in a text editor and provide your own [bot token](https://dpp.dev/creating-a-bot-application.html), after which you can run fixedphilip as normal.
 
-Aside from the `token`, the `config.json` also contains the following keys (remove a key to reset it to its defaults):
+fixedphilip supports the following optional launch parameters:
+- `--total-shards` - Equivalent to the `shards` parameter of the `dpp::cluster` constructor
+  - *"The total number of shards on this bot. If there are multiple clusters, then (shards / clusters) actual shards will run on this cluster. If you omit this value, the library will attempt to query the Discord API for the correct number of shards to start."*
+  - By default, this value is set to 0 (ie. "omitted")
+- `--cluster-id` - Equivalent to the `cluster_id` parameter of the `dpp::cluster` constructor
+  - *"The ID of this cluster, should be between 0 and MAXCLUSTERS-1"*
+  - By default, this value is set to 0
+- `--max-clusters` - Equivalent to the `maxclusters` parameter of the `dpp::cluster` constructor
+  - *"The total number of clusters that are active, which may be on separate processes or even separate machines."*
+  - By default, this value is set to 1
+- `--intents` - Equivalent to the `intents` parameter of the `dpp::cluster` constructor
+  - *"A bitmask of dpd::intents values for all shards on this cluster. This is required to be sent for all bots with over 100 servers."*
+  - By default, this value is set to `dpp::i_default_intents | dpp::i_message_content | dpp::i_guild_members`
+- `--config-file` - the absolute or relative path to the config file
+  - By default, this value is set to `config.json`
+
+Aside from the `token`, the `config.json` also contains the following keys:
 - `prefix` - the default/global chat prefix for old-style commands
   - If you wish to disable old-style commands, set the prefix to a blank string ("")
+- `disabled_modules` - an array of strings containing the names of the modules you want to disable
+  - If you don't want to disable any modules, leave the array empty
+  
+If the `presence` module is enabled, the following keys can be found in `presence.json`:
 - `presence_activity` - the activity text shown in the bot's presence (member list and profile)
   - If you wish to disable the bot's presence altogether, set this to a blank string ("")
   - Accepts prefixes "Playing ...", "Streaming ...", "Listening to ...", "Watching ..." and "Competing in ..."
@@ -66,6 +86,8 @@ Aside from the `token`, the `config.json` also contains the following keys (remo
 - `presence_status` - the status icon/color shown in the bot's presence (member list and profile)
   - Accepts "offline", "online", "dnd", "idle" and "invisible"
 - `presence_update_rate_mins` - how often the bot's presence should update (0 means the status only gets set once on startup)
+
+Removing any key resets its value to default.
 
 ## Building
 To get started, clone the repository while recursing submodules, but ignore `src/commands/private`, as this submodule/folder is reserved for my own private closed-source commands.

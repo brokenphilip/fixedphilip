@@ -628,7 +628,7 @@ namespace fixedphilip::discord
     {
         counts counts;
         auto guild_cache = dpp::get_guild_cache();
-        if (guild_cache)
+        if (!guild_cache)
         {
             co_return counts;
         }
