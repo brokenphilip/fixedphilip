@@ -140,10 +140,11 @@ Adding new features to fixedphilip is done by creating commands. Each command's 
 // This include file contains all the necessary data structures to create a fixedphilip module
 #include <fixedphilip/discord.h>
 
-// Can be anything, really, so long as it's ideally not in the global namespace
+// Can be anything really, so long as it's ideally not in the global namespace
 namespace fixedphilip
 {
-    // Al
+    // Each module should inherit from the base class, as it is pretty useless on its own
+	// You can name it whatever - this repository, for consistency, names it "<module_name>_module"
     class example_module : public fixedphilip::discord::bot::module
     {
         // This function is called when the "/test" command is being executed by a (non-bot) user
@@ -160,6 +161,8 @@ namespace fixedphilip
         static dpp::task<void> run_test(const fixedphilip::discord::bot::command::run_event& event)
         {
 		    event.reply("Hello world! :3");
+
+			// As this is a coroutine, if you're not co_await-ing any functions, you must specifically write "co_return"
             co_return;
 		}
 
@@ -181,6 +184,7 @@ namespace fixedphilip
         virtual std::vector<fixedphilip::discord::bot::command> commands(fixedphilip::discord::bot& bot) override final
         {
             fixedphilip::discord::bot::command test("test", "Test example command", bot.me.id, run_test);
+			// test.add_option(...).add_option(...);
 
 			// If your module requires multiple commands, you'd add them to the initializer list return here
             return { test };
@@ -194,38 +198,19 @@ namespace fixedphilip
             // By default, this virtual function does nothing - if you don't need it, you don't need to override it
 		}
 
+        // Since this module is designed to be single-instance, we fill in the base constructor parameters here
+        // If you make a dynamically allocated module, you'd usually pass this info through your constructor
+		// While it's not illegal for multiple modules to share the same name, it is not recommended
     public:
+	    // For consistency and linked list order, this repository practices lowercase module names
+		// You don't have to do this, but be wary that mixing cases will affect the alphabetical order
 		example_module() : fixedphilip::discord::bot::module("example", "This is the example module's description") {}
     };
-    // Modules are, by design, meant to be single-instance
+    // Modules are, by design, meant to be single-instance, but they don't have to be!
+	// If you plan on making dynamically allocated modules, you can use bot::add_module() and bot::remove_module()
     // When a module is being instantiated, it gets added to the internal alphabetically-sorted linked list of modules
-    // This linked list is iterated for each fixedphilip::discord::bot during construction
+    // This linked list is iterated for each fixedphilip bot during construction, where each module gets initialized
+    // Dynamically allocated modules also get added to this internal linked list, but it is basically useless
     static example_module instance;
 }
-```
-    }
-    // This callback runs when the command is being created/initialized, right before it's registered
-    // Return true if initialization was successful and register the command, false otherwise
-    dpp::task<bool> init(dpp::slashcommand& command, fixedphilip::discord::bot& bot)
-    {
-        // Here you can modify the "command" reference (to add options to it, or set its flags)
-        // Of course, you may run your own custom initialization code here too
-        co_return true;
-    }
-
-	// This callback runs when either the slash-command or the old-style (prefix) command is executed
-    dpp::task<void> run(const fixedphilip::command::run_event& event, fixedphilip::discord::bot& bot)
-    {
-        // "event" is a variant which contains either a dpp::message_create_t or a dpp::slashcommand_t
-        // (you can convert the "event" to either of the two using run_event's get_*() functions)
-        // ...but it also contains variant-agnostic helper functions, such as "reply(...)"
-        event.reply("Hello from example command! :3");
-        co_return;
-    }
-}
-
-// This macro allocates your "/example" command (ie. fixedphilip::commands::example) in static memory
-// ...adding it to the alphabetically-sorted (based on command name) internal linked list of commands
-// Commands will always be created/initialized in the (alphabetical) order of the linked list
-FIXEDPHILIP_COMMAND(example, "This is an example command's description");
 ```
