@@ -3,7 +3,11 @@
 
 > *"when is brokenphilip getting fixed?!" -several concerned internet strangers*
 
-fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library. The bot aims to provide a convenient set of unique features for everyday use, and it is designed to support both modern slash-commands (for guild/server and user installs), as well as optional old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
+fixedphilip is a general-purpose Discord bot written in C++20, utilizing the [D++](https://dpp.dev/) library.
+
+The bot aims to provide a convenient set of unique features for everyday use, and it is designed to support both modern slash-commands (for guild/server and user installs), as well as optional old-style (chat prefix) commands (provided the "Message Content" privileged intent is enabled).
+
+The project is configured to build for (and run on) Windows and ARM64 using the Visual Studio development environment, but the CMake presets file can be modified to support any platform that the D++ library itself supports.
 
 Some of fixedphilip's most notable features include:
 - Detailed `/status` command with uptime, statistics, machine resource usage* and other info
@@ -129,7 +133,7 @@ After building, `rsync` fixedphilip to your target system, to a location (folder
 Proceed to setup and run fixedphilip as explained above.
 
 ## Development
-While there is no official documentation, most header file functions and data structures are either self-explanatory or thoroughly documented via comments.
+While there is no official documentation (aside from the D++ library documentation provided on [their website](https://dpp.dev/)), most header file functions and data structures are either self-explanatory or thoroughly documented via comments.
 ### Creating modules
 Adding new features to fixedphilip is done by creating modules. Each module's source file is located under `src/modules/*.cpp`, and is usually named after the module. This ensures each command is its own separated compilation unit that can be freely disabled at any time.
 ```cpp
