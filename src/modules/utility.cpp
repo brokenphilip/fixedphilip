@@ -102,9 +102,6 @@ namespace fixedphilip::discord
                         total_user_count))
                 .add_field("Cluster ID", std::format("`{}` (out of {})", cluster->cluster_id, cluster->maxclusters))
                 .add_field("Shard ID", std::format("`{}` (out of {})", event.event_dispatch().shard, cluster->numshards))
-                .add_field("CPU usage", "`???` (of total `???`)")
-                .add_field("Memory usage", "`???` (of total `???`)")
-                .add_field("Disk usage", "`???` (of total `???`)")
                 .set_footer(dpp::embed_footer().set_text("Last restarted"))
                 .set_timestamp(cluster->start_time_unix());
 

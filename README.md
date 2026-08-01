@@ -10,7 +10,6 @@ The bot aims to provide a convenient set of unique features for everyday use, an
 The project is configured to build for (and run on) Windows and ARM64 using the Visual Studio development environment, but the CMake presets file can be modified to support any platform that the D++ library itself supports.
 
 Some of fixedphilip's most notable features include:
-- Detailed `/status` command with uptime, statistics, machine resource usage* and other info
 - Conversion between most measurable units and all currencies using `/convert`
 - Information and notifications/subscriptions (on a municipality, settlement or street level) regarding planned power outages in Serbia using `/eds`*
 - Advanced `/remind`er management*
