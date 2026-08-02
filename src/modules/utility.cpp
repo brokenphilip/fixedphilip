@@ -29,8 +29,8 @@ namespace fixedphilip::discord
             auto cluster = event.get_bot();
             if (!cluster)
             {
-                event.reply(dpp::message(":warning: **| An internal error occurred.**").set_flags(dpp::m_ephemeral));
                 fixedphilip::log::error("run_get_banner: bot was null");
+                event.reply(dpp::message(":warning: **| An internal error occurred.**").set_flags(dpp::m_ephemeral));
                 co_return;
             }
 
@@ -51,6 +51,10 @@ namespace fixedphilip::discord
                     }
                 }
                 event.reply(dpp::message(std::format(":frame_photo: **| `{}`'s banner is:** {}", user_identified->username, banner)).set_flags(dpp::m_ephemeral));
+            }
+            else
+            {
+                event.reply(dpp::message(":warning: **| An internal error occurred.**").set_flags(dpp::m_ephemeral));
             }
         }
 
