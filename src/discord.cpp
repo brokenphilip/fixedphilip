@@ -428,7 +428,7 @@ namespace fixedphilip::discord
                 {
                     fixedphilip::log::warning
                     (
-                        "The 'Guild Members' privileged intent is not enabled for this application. "
+                        "The 'Guild Members' privileged intent was requested but is not enabled for this application. "
                         "Features that require 'on_guild_member_add/remove' (when users join or leave a server), "
                         "'on_guild_member_update' (when a user's server info is updated) or complete member lists of servers, "
                         "such as displaying accurate statistics as to how many users the bot is serving, will not work for this session. "
@@ -441,7 +441,7 @@ namespace fixedphilip::discord
                 {
                     fixedphilip::log::warning
                     (
-                        "The 'Guild Presences' privileged intent is not enabled for this application. "
+                        "The 'Guild Presences' privileged intent was requested but is not enabled for this application. "
                         "Features that require user presence (status, activities) updates will not work for this session. "
                         "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."
                     );
@@ -452,7 +452,7 @@ namespace fixedphilip::discord
                 {
                     fixedphilip::log::warning
                     (
-                        "The 'Message Content' privileged intent is not enabled for this application. "
+                        "The 'Message Content' privileged intent was requested but is not enabled for this application. "
                         "Features that require 'on_message_create' (when a message is sent) or 'on_message_update' "
                         "(when a message is edited), such as old-style prefix commands, will not work for this session. "
                         "Visit the Discord Developer Portal page for your application/bot to enable the intent and fix this issue."

@@ -150,9 +150,9 @@ namespace fixedphilip::discord
 					.set_max_value(std::numeric_limits<double>::max_digits10))
 				.add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
-			bot::command convert("convert", "Convert between units and currencies", bot.me.id, run_convert);
-			convert.add_option(dpp::command_option(dpp::co_string, "value", "Number and units/currencies to convert from", true))
-				.add_option(dpp::command_option(dpp::co_string, "to", "Units/currencies to convert the value to", true))
+			bot::command convert("convert", "Convert between units or currencies", bot.me.id, run_convert);
+			convert.add_option(dpp::command_option(dpp::co_string, "value", "Values (math expressions and units/currencies) to convert from", true))
+				.add_option(dpp::command_option(dpp::co_string, "to", "Unit(s) or currency to convert the value to", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
 					.set_min_value(-1)
 					.set_max_value(std::numeric_limits<double>::max_digits10))
