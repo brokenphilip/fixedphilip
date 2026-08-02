@@ -1,6 +1,5 @@
 #include <fixedphilip/file.h>
 
-#include <filesystem>
 #include <fstream>
 
 namespace fixedphilip::file
@@ -81,7 +80,7 @@ namespace fixedphilip::file
 		return r_success;
 	}
 
-	result base::save(const settings& save_settings)
+	result base::save(const settings& save_settings) const
 	{
 		auto& filename = save_settings.filename;
 		auto log = save_settings.log;
@@ -114,5 +113,33 @@ namespace fixedphilip::file
 			return r_write_error;
 		}
 		return r_success;
+	}
+
+	uintmax_t get_folder_size(const std::filesystem::path& folder)
+	{
+		uintmax_t size = 0;
+		for (auto& entry : std::filesystem::recursive_directory_iterator(folder))
+		{
+			if (entry.is_regular_file())
+			{
+				size += entry.file_size();
+			}
+		}
+		return size;
+	}
+	std::string size_to_string(uintmax_t size_in_bytes)
+	{
+		double size = size_in_bytes;
+		static const std::vector<std::string> levels { "", "Ki", "Mi", "Gi", "Ti" };
+
+		for (int i = 0; i < levels.size(); i++)
+		{
+			if (size < 1'024.0)
+			{
+				return std::format("{} {}B", size, levels[i]);
+			}
+			size /= 1'024.0;
+		}
+		return std::format("{} PiB", size);
 	}
 }

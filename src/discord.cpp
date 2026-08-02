@@ -1,13 +1,66 @@
 #include <fixedphilip/discord.h>
 
 #include <fixedphilip/build.h>
+#include <fixedphilip/math.h>
 
 #include <fixedphilip/utils/string.h>
 #include <fixedphilip/utils/time.h>
 
 namespace fixedphilip::discord
 {
-    nlohmann::json bot::config::struct_to_json()
+    nlohmann::json bot_settings::struct_to_json() const
+    {
+        return
+        {
+            { "prefix", prefix },
+            { "disabled_modules", disabled_modules },
+            { "data_folder", data_folder },
+            { "max_data_size_id", fixedphilip::file::size_to_string(max_data_size_id) },
+            { "max_data_size_total", fixedphilip::file::size_to_string(max_data_size_total) },
+        };
+    }
+
+    bool bot_settings::json_to_struct(const nlohmann::json& data)
+    {
+        fixedphilip::file::json_try_at(data, "prefix", prefix);
+        fixedphilip::file::json_try_at(data, "disabled_modules", disabled_modules);
+        fixedphilip::file::json_try_at(data, "data_folder", data_folder);
+
+        std::string max_data_size_id_str;
+        if (fixedphilip::file::json_try_at(data, "max_data_size_id", max_data_size_id_str))
+        {
+            try
+            {
+                fixedphilip::math::number_t max_data_size_id_num;
+                fixedphilip::math::conversion::convert(max_data_size_id_str, "b", -1, false, nullptr, nullptr, &max_data_size_id_num);
+                max_data_size_id = static_cast<uintmax_t>(max_data_size_id_num);
+            }
+            catch (std::exception& e)
+            {
+                fixedphilip::log::error(std::format("Failed to parse 'max_data_size_id' for bot settings - {}", e.what()));
+            }
+        }
+
+        std::string max_data_size_total_str;
+        if (fixedphilip::file::json_try_at(data, "max_data_size_total", max_data_size_total_str))
+        {
+            try
+            {
+                fixedphilip::math::number_t max_data_size_total_num;
+                fixedphilip::math::conversion::convert(max_data_size_total_str, "b", -1, false, nullptr, nullptr, &max_data_size_total_num);
+                max_data_size_total = static_cast<uintmax_t>(max_data_size_total_num);
+            }
+            catch (std::exception& e)
+            {
+                fixedphilip::log::error(std::format("Failed to parse 'max_data_size_total' for bot settings - {}", e.what()));
+            }
+        }
+
+        // partial load is okay (though this retval is ignored anyways)
+        return true;
+    }
+
+    nlohmann::json bot::config::struct_to_json() const
     {
         nlohmann::json data
         {
@@ -236,7 +289,7 @@ namespace fixedphilip::discord
     {
         // line 195 of cluster.cpp doesn't seem correct... 		dpp::log_t logmsg(nullptr, 0, msg); - why pass nullptr/0 ?! ?! ?!
         fixedphilip::log::implementation(
-            event.severity, 
+            event.severity,
             //std::format("Cl: {}, Sh: {}", 
             //    event.owner ? std::to_string(event.owner->cluster_id) : "N/A", 
             //    event.shard), 
@@ -491,8 +544,27 @@ namespace fixedphilip::discord
         });
     }
 
-    bot::bot(const std::string& token, const bot_settings& settings, uint32_t intents, uint32_t shards, uint32_t cluster_id, 
-        uint32_t maxclusters, bool compressed, dpp::cache_policy_t policy, uint32_t pool_threads) 
+    std::filesystem::path bot::data_folder_id(dpp::snowflake id)
+    {
+        return std::filesystem::path(settings_.data_folder) / std::to_string(id);
+    }
+
+    fixedphilip::file::settings bot::data_file_settings(dpp::snowflake id, const std::string& name)
+    {
+        auto filename = name + ".json";
+        auto data_path = data_folder_id(id) / filename;
+
+        fixedphilip::file::settings settings
+        {
+            .filename = data_path.string(),
+            .create_if_not_found = true,
+            .log = true,
+        };
+        return settings;
+    }
+
+    bot::bot(const std::string& token, const bot_settings& settings, uint32_t intents, uint32_t shards, uint32_t cluster_id,
+        uint32_t maxclusters, bool compressed, dpp::cache_policy_t policy, uint32_t pool_threads)
         : dpp::cluster(token, intents, shards, cluster_id, maxclusters, compressed, policy, pool_threads), settings_(settings)
     {
         // attach our own events first (modules do it in their own inits, but we do their commands ourselves later)
@@ -532,7 +604,7 @@ namespace fixedphilip::discord
             }
             first_module = false;
             loaded_modules_.push_back(iter);
-        } 
+        }
         while (iter = iter->next());
 
         log(dpp::ll_info, std::format("Loaded {} module{}{}", loaded_modules_.size(), loaded_modules_.size() == 1 ? "" : "s", result_log));
@@ -613,15 +685,41 @@ namespace fixedphilip::discord
     dpp::snowflake bot::slash_command_snowflake(const std::string& slash_command)
     {
         auto module_command = std::find_if(module_commands_.begin(), module_commands_.end(), [&slash_command](const bot::module_command& other)
-            {
-                return other.name == slash_command && other.type == dpp::ctxm_chat_input;
-            });
+        {
+            return other.name == slash_command && other.type == dpp::ctxm_chat_input;
+        });
         if (module_command == module_commands_.end())
         {
             return dpp::snowflake();
         }
         // module_command->id is 0 for some reason
         return module_command->snowflake;
+    }
+
+    fixedphilip::file::result bot::load_data(dpp::snowflake id, const std::string& name, bot::data& data_out)
+    {
+        return data_out.load(data_file_settings(id, name));
+    }
+
+    fixedphilip::file::result bot::save_data(dpp::snowflake id, const std::string& name, const bot::data& data)
+    {
+        auto data_size = data.save_from_struct().size();
+        if (data_size_id(id) + data_size > settings_.max_data_size_id
+            || data_size_total() + data_size > settings_.max_data_size_total)
+        {
+            return fixedphilip::file::r_write_error;
+        }
+        return data.save(data_file_settings(id, name));
+    }
+
+    uintmax_t bot::data_size_total()
+    {
+        return fixedphilip::file::get_folder_size(settings_.data_folder);
+    }
+
+    uintmax_t bot::data_size_id(dpp::snowflake id)
+    {
+        return fixedphilip::file::get_folder_size(data_folder_id(id));
     }
 
     dpp::task<bot::counts> bot::co_get_counts()

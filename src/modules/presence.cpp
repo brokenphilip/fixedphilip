@@ -37,7 +37,7 @@ namespace fixedphilip::discord
 
 			int update_rate_mins = 5;
 
-			virtual nlohmann::json struct_to_json() override final
+			virtual nlohmann::json struct_to_json() const override final
 			{
 				if (activity_type == dpp::at_custom)
 				{

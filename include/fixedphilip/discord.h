@@ -18,7 +18,6 @@ namespace fixedphilip::discord
 {
 	// Settings stored and used inside each fixedphilip bot/cluster
 	// These settings can be loaded from and saved to a config file, see the config struct below
-	// Modify this data structure to add new settings to the config/bot classes
 	struct bot_settings
 	{
 		// Chat prefix for old-style commands (can be set to blank to disable)
@@ -28,28 +27,26 @@ namespace fixedphilip::discord
 		// Accepts wildcards ('*') - todo
 		std::vector<std::string> disabled_modules = {};
 
+		// Folder where bot (user/guild/global) data should be stored
+		// Can be absolute or relative
+		std::string data_folder = "data";
+
+		// Maximum size of bot (user/guild/global) data for any given snowflake ID
+		uintmax_t max_data_size_id = 1024 * 1024;
+
+		// Maximum total size of bot (user/guild/global) data
+		uintmax_t max_data_size_total = 1024 * 1024 * 1024;
+
 		// Modify this function to return json data of this structure
-		inline nlohmann::json struct_to_json()
-		{
-			return
-			{
-				{ "prefix", prefix },
-				{ "disabled_modules", disabled_modules },
-			};
-		}
+		nlohmann::json struct_to_json() const;
 
 		// Modify this function to read structure data from json
-		inline bool json_to_struct(const nlohmann::json& data)
-		{
-			fixedphilip::file::json_try_at(data, "prefix", prefix);
-			fixedphilip::file::json_try_at(data, "disabled_modules", disabled_modules);
-
-			return true;
-		}
+		bool json_to_struct(const nlohmann::json& data);
 	};
 
 	// The base of a fixedphilip bot/cluster, expanded to support
 	// - Modules and their commands
+	// - Global, user or guild-specific bot data management
 	// - Additional info such as settings, instance owner, etc...
 	class bot : public dpp::cluster
 	{
@@ -60,7 +57,7 @@ namespace fixedphilip::discord
 			std::string token = FIXEDPHILIP_DEFAULT_TOKEN;
 			bot_settings settings;
 
-			virtual nlohmann::json struct_to_json() override final;
+			virtual nlohmann::json struct_to_json() const override final;
 			virtual bool json_to_struct(const nlohmann::json& data) override final;
 
 			// Use this instead of load() to load the config
@@ -169,6 +166,14 @@ namespace fixedphilip::discord
 
 			inline auto description() { return description_; }
 		};
+		
+		// File-based (JSON) data structure for storing global, user or guild-specific bot data
+		class data : public fixedphilip::file::json<-1, ' '>
+		{
+			using fixedphilip::file::base::save;
+			using fixedphilip::file::base::load;
+			friend class bot;
+		};
 	private:
 		// Constructed on startup and read-only - no need for a mutex
 		bot_settings settings_;
@@ -204,6 +209,9 @@ namespace fixedphilip::discord
 
 		void create_commands_async();
 		void fetch_app_info_async();
+
+		std::filesystem::path data_folder_id(dpp::snowflake id);
+		fixedphilip::file::settings data_file_settings(dpp::snowflake id, const std::string& name);
 	public:
 		bot(const std::string& token, const bot_settings& settings, uint32_t intents = dpp::i_default_intents,
 			uint32_t shards = 0, uint32_t cluster_id = 0, uint32_t maxclusters = 1, bool compressed = true,
@@ -214,7 +222,10 @@ namespace fixedphilip::discord
 		// Returns a copy of the bot's settings
 		inline auto settings() { return settings_; }
 
+		// Formats bot running time as "??h ??m ??s", or "?d ??h ??m" if over 24 hours have passed
 		std::string format_running_time();
+
+		// Returns the unix timestamp when the bot was created
 		inline auto start_time_unix() { return std::chrono::duration_cast<std::chrono::seconds>(start_time_.time_since_epoch()).count(); }
 
 		// Returns a copy of the list of loaded modules
@@ -236,6 +247,21 @@ namespace fixedphilip::discord
 
 		// Returns a copy of the dpp::user who owns this app/instance
 		inline auto app_owner() { std::shared_lock _(app_owner_mutex_); return app_owner_; }
+
+		// Load global, user or guild-specific bot data
+		fixedphilip::file::result load_data(dpp::snowflake id, const std::string& name, bot::data& data_out);
+
+		// Save global, user or guild-specific bot data
+		// In addition to base::save return values, also returns 'r_write_error' if we're over our size quota
+		fixedphilip::file::result save_data(dpp::snowflake id, const std::string& name, const bot::data& data);
+
+		// Returns the current size of all bot data
+		// The maximum value can be found under settings()
+		uintmax_t data_size_total();
+
+		// Returns the current size of bot data for this ID
+		// The maximum value can be found under settings()
+		uintmax_t data_size_id(dpp::snowflake id);
 
 		// Server and user counts, for the servers the bot is currently in, as well as all the (guild and user install) users it can see
 		struct counts

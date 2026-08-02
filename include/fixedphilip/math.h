@@ -184,6 +184,26 @@ namespace fixedphilip::math
                     { "Hu²", { "sq.hu", "sqhu", "hu2", "hu^2"/*, "square hammer unit", "square hammer units"*/ }, divide<2'755.55704356>, multiply<2'755.55704356> },
                 }
             },
+            { "Digital Storage",
+                {
+                    { "B", { "b", "byte", "bytes" } },
+                    
+                    { "KB", { "kb", "kilobyte", "kilobytes" }, kilo_to_base, base_to_kilo },
+                    { "KiB", { "kib", "kibibyte", "kibibytes" }, multiply<1'024.0>, divide<1'024.0> },
+
+                    { "MB", { "mb", "megabyte", "megabytes" }, mega_to_base, base_to_mega },
+                    { "MiB", { "mib", "mebibyte", "mebibytes" }, multiply<1'048'576.0>, divide<1'048'576.0> },
+
+                    { "GB", { "gb", "gigabyte", "gigabytes" }, giga_to_base, base_to_giga },
+                    { "GiB", { "gib", "gibibyte", "gibibytes" }, multiply<1'073'741'824.0>, divide<1'073'741'824.0> },
+
+                    { "TB", { "tb", "terabyte", "terabytes" }, tera_to_base, base_to_tera },
+                    { "TiB", { "tib", "tebibyte", "tebibytes" }, multiply<1'099'511'627'776.0>, divide<1'099'511'627'776.0>},
+
+                    { "PB", { "pb", "petabyte", "petabytes" }, peta_to_base, base_to_peta },
+                    { "PiB", { "pib", "pebibyte", "pebibytes" }, multiply<1'125'899'906'842'624.0>, divide<1'125'899'906'842'624.0> },
+                }
+            },
             { "Length",
                 {
                     { "nm", { "nm", "nanometer", "nanometers", "nanometre", "nanometres" }, nano_to_base, base_to_nano },
@@ -202,6 +222,22 @@ namespace fixedphilip::math
                     { "nmi", { "nmi", "nm"/*, "nautical mile", "nautical miles"*/ }, multiply<1'852.0>, divide<1'852.0> },
 
                     { "Hu", { "hu"/*, "hammer unit", "hammer units"*/ }, divide<52.4934>, multiply<52.4934> },
+                }
+            },
+            { "Mass",
+                {
+                    { "ng", { "ng", "nanogram", "nanograms" }, nano_to_base, base_to_nano },
+                    { "µg", { "ug", "microgram", "micrograms" }, micro_to_base, base_to_micro },
+                    { "mg", { "mg", "milligram", "milligrams" }, milli_to_base, base_to_milli },
+                    { "g", { "g", "gram", "grams" } },
+                    { "kg", { "kg", "kilogram", "kilograms" }, kilo_to_base, base_to_kilo },
+                    { "t", { "t", "ton", "tonne"/*, "metric ton"*/ }, mega_to_base, base_to_mega }, // todo - use this for long/short ton?
+
+                    { "oz", { "oz", "ounce", "ounces" }, multiply<28.34952>, divide<28.34952> },
+                    { "lb", { "lb", "lbs", "pound", "pounds" }, multiply<493.59237>, divide<493.59237> },
+                    { "st", { "st", "stone", "stones" }, multiply<6'350.29497>, divide<6'350.29497> },
+                    //{ "long ton(s)", { "long ton", "long tons", "imperial ton", "imperial tons", "british ton", "british tos", "displacement ton", "displacement tons" }, divide<1'016'047.0>, multiply<1'016'047.0> },
+                    //{ "short ton(s)", { "short ton", "short tons", "tn", "st", "us ton", "us tons" }, divide<907'180.0>, multiply<907'180.0> },
                 }
             },
             { "Speed",
@@ -234,22 +270,6 @@ namespace fixedphilip::math
                     { "calendar month(s)", { "cmo"/*, "calendar month", "calendar months"*/ }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
                     { "solar year(s)", { "y", "yr", "yrs", "sy", "syr", "syrs", "year", "years"/*, "solar year", "solar years"*/ }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
                     { "calendar year(s)", { "cy", "cyr", "cyrs"/*, "calendar year", "calendar years"*/ }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
-                }
-            },
-            { "Mass",
-                {
-                    { "ng", { "ng", "nanogram", "nanograms" }, nano_to_base, base_to_nano },
-                    { "µg", { "ug", "microgram", "micrograms" }, micro_to_base, base_to_micro },
-                    { "mg", { "mg", "milligram", "milligrams" }, milli_to_base, base_to_milli },
-                    { "g", { "g", "gram", "grams" } },
-                    { "kg", { "kg", "kilogram", "kilograms" }, kilo_to_base, base_to_kilo },
-                    { "t", { "t", "ton", "tonne"/*, "metric ton"*/ }, mega_to_base, base_to_mega }, // todo - use this for long/short ton?
-
-                    { "oz", { "oz", "ounce", "ounces" }, multiply<28.34952>, divide<28.34952> },
-                    { "lb", { "lb", "lbs", "pound", "pounds" }, multiply<493.59237>, divide<493.59237> },
-                    { "st", { "st", "stone", "stones" }, multiply<6'350.29497>, divide<6'350.29497> },
-                    //{ "long ton(s)", { "long ton", "long tons", "imperial ton", "imperial tons", "british ton", "british tos", "displacement ton", "displacement tons" }, divide<1'016'047.0>, multiply<1'016'047.0> },
-                    //{ "short ton(s)", { "short ton", "short tons", "tn", "st", "us ton", "us tons" }, divide<907'180.0>, multiply<907'180.0> },
                 }
             },
         };

@@ -5,6 +5,7 @@
 #include <dpp/nlohmann/json.hpp>
 
 #include <format>
+#include <filesystem>
 
 namespace fixedphilip::file
 {
@@ -37,7 +38,7 @@ namespace fixedphilip::file
 	struct base
 	{
 		// Use this function to convert your data structure to a string, which will be written to a file
-		virtual std::string save_from_struct() = 0;
+		virtual std::string save_from_struct() const = 0;
 
 		// Use this function to convert the string data loaded from a file to your data structure
 		// Return false to pass 's_parse_error' to the load() function
@@ -56,7 +57,7 @@ namespace fixedphilip::file
 		// - 'r_open_file_error' if it failed to open the file for writing
 		// - 'r_write_error' if it failed to write contents to the file
 		// - 'r_file_not_found' if the file was not found and create_if_not_found is disabled
-		result save(const settings& save_settings);
+		result save(const settings& save_settings) const;
 	};
 
 	// An extension of the base file structure, which saves compact json data to a file
@@ -67,14 +68,14 @@ namespace fixedphilip::file
 	struct json : public base
 	{
 		// Use this function to convert your data structure to a json, which will be written to a file
-		virtual nlohmann::json struct_to_json() = 0;
+		virtual nlohmann::json struct_to_json() const = 0;
 
 		// Use this function to convert the string data loaded from a file to your data structure. Return false to pass 's_parse_error' to load()
 		// Return false to pass 's_parse_error' to the load() function
 		// (if you're okay with partial loads, particularly if you make use of default values, return true)
 		virtual bool json_to_struct(const nlohmann::json& data) = 0;
 
-		virtual std::string save_from_struct() override //final
+		virtual std::string save_from_struct() const override //final
 		{
 			return struct_to_json().dump(indent, indent_char);
 		}
@@ -113,4 +114,8 @@ namespace fixedphilip::file
 			return false;
 		}
 	}
+
+	uintmax_t get_folder_size(const std::filesystem::path& folder);
+
+	std::string size_to_string(uintmax_t size_in_bytes);
 }

@@ -1,7 +1,7 @@
 #include <fixedphilip/log.h>
 
 #include <iostream> // std::cout
-
+#include <syncstream> // std::osyncstream
 
 #include <dpp/utility.h> // dpp::utility::*
 
@@ -13,12 +13,14 @@ namespace fixedphilip::log
 		{
 			return;
 		}
-		std::cout << "[" << dpp::utility::current_date_time() << "] ";
+
+		std::osyncstream sync_cout(std::cout);
+		sync_cout << "[" << dpp::utility::current_date_time() << "] ";
 		if (!prefix.empty())
 		{
-			std::cout << "(" << prefix << ") ";
+			sync_cout << "(" << prefix << ") ";
 		}
-		std::cout << dpp::utility::loglevel(ll) << ": " << message << std::endl;
+		sync_cout << dpp::utility::loglevel(ll) << ": " << message << std::endl;
 	}
 
 	void trace(const std::string& message)
