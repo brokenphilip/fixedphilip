@@ -128,8 +128,15 @@ int main(int argc, char* argv[])
             fixedphilip::log::error("Bot configuration failed - shutting down...");
             return 1;
         }
-        fixedphilip::discord::bot bot(bot_config.token, bot_config.settings, intents, total_shards, cluster_id, max_clusters);
-        bot.start();
+        try
+        {
+            fixedphilip::discord::bot bot(bot_config.token, bot_config.settings, intents, total_shards, cluster_id, max_clusters);
+            bot.start();
+        }
+        catch (std::exception& e)
+        {
+            fixedphilip::log::error(std::format("Exception starting bot - {}", e.what()));
+        }
     }
 
     fixedphilip::log::info("Bot terminated - shutting down...");

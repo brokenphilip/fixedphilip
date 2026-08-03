@@ -153,19 +153,19 @@ namespace fixedphilip::discord
 
     const dpp::interaction_create_t* bot::command::run_event::get_interaction_create() const
     {
-        if (auto slash_command = get_slash_command())
+        return std::visit([](auto&& arg) -> const dpp::interaction_create_t*
         {
-            return slash_command;
-        }
-        else if (auto message_menu = get_message_context_menu())
-        {
-            return message_menu;
-        }
-        else if (auto user_menu = get_user_context_menu())
-        {
-            return user_menu;
-        }
-        return nullptr;
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_base_of_v<dpp::interaction_create_t, T>)
+            {
+                return &arg;
+            }
+            else
+            {
+                return nullptr;
+            }
+        },
+        *this);
     }
 
     const dpp::event_dispatch_t& bot::command::run_event::event_dispatch() const
@@ -175,6 +175,15 @@ namespace fixedphilip::discord
             return event_dispatch;
         },
         *this);
+    }
+
+    dpp::user bot::command::run_event::get_command_invoker() const
+    {
+        if (auto message_create = get_message_create())
+        {
+            return message_create->msg.author;
+        }
+        return get_interaction_create()->command.usr;
     }
 
     void bot::command::run_event::reply(const dpp::message& msg, dpp::command_completion_event_t callback) const
@@ -227,16 +236,11 @@ namespace fixedphilip::discord
 
     void bot::command::run_event::reply_not_impl_use_other() const
     {
-        auto cluster = get_bot();
-        if (!cluster)
-        {
-            fixedphilip::log::error("reply_not_impl_use_other: cluster was null");
-            reply(":warning: **| Not implemented.**");
-            return;
-        }
-
-        auto prefix = cluster->settings().prefix;
         std::string command_text;
+
+        auto cluster = get_bot();
+        auto prefix = cluster->settings().prefix;
+        
         if (auto slash_command = get_slash_command())
         {
             if (prefix.empty())
@@ -262,9 +266,7 @@ namespace fixedphilip::discord
         }
         else
         {
-            cluster->log(dpp::ll_error, "reply_not_impl_use_other: incorrectly called by wrong run_event type");
-            reply(":warning: **| Not implemented.**");
-            return;
+            throw std::logic_error("reply_not_impl_use_other called from unsupported run_event variant");
         }
         reply(std::format(":warning: **| Not implemented, use {} instead.**", command_text));
     }
@@ -280,7 +282,7 @@ namespace fixedphilip::discord
                 co_return;
             }
             cluster->ready_init_done_ = true;
-            cluster->log(dpp::ll_info, "Connected and logged in as: " + cluster->me.format_username());
+            cluster->log(dpp::ll_info, std::format("Connected and logged in as: {} ({})", cluster->me.format_username(), cluster->me.id));
             cluster->create_commands_async();
         }
     }
@@ -544,11 +546,6 @@ namespace fixedphilip::discord
         });
     }
 
-    std::filesystem::path bot::data_folder_id(dpp::snowflake id)
-    {
-        return std::filesystem::path(settings_.data_folder) / std::to_string(id);
-    }
-
     fixedphilip::file::settings bot::data_file_settings(dpp::snowflake id, const std::string& name)
     {
         auto filename = name + ".json";
@@ -720,6 +717,11 @@ namespace fixedphilip::discord
     uintmax_t bot::data_size_id(dpp::snowflake id)
     {
         return fixedphilip::file::get_folder_size(data_folder_id(id));
+    }
+
+    std::filesystem::path bot::data_folder_id(dpp::snowflake id)
+    {
+        return std::filesystem::path(settings_.data_folder) / std::to_string(id);
     }
 
     dpp::task<bot::counts> bot::co_get_counts()

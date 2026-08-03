@@ -6,14 +6,6 @@ namespace fixedphilip::discord
     {
         static dpp::task<void> run_get_avatar(const bot::command::run_event& event)
         {
-            auto cluster = event.get_bot();
-            if (!cluster)
-            {
-                event.reply(":warning: **| An internal error occurred.**");
-                fixedphilip::log::error("run_get_avatar: bot was null");
-                co_return;
-            }
-
             auto& user = event.get_user_context_menu()->get_user();
             auto avatar = user.get_avatar_url(4096);
             if (avatar.empty())
@@ -26,15 +18,7 @@ namespace fixedphilip::discord
 
         static dpp::task<void> run_get_banner(const bot::command::run_event& event)
         {
-            auto cluster = event.get_bot();
-            if (!cluster)
-            {
-                fixedphilip::log::error("run_get_banner: bot was null");
-                event.reply(dpp::message(":warning: **| An internal error occurred.**").set_flags(dpp::m_ephemeral));
-                co_return;
-            }
-
-            auto result = co_await cluster->co_user_get(event.get_user_context_menu()->get_user().id);
+            auto result = co_await event.get_bot()->co_user_get(event.get_user_context_menu()->get_user().id);
             if (auto user_identified = fixedphilip::discord::get_if<dpp::user_identified>("run_get_banner, co_user_get", result))
             {
                 auto banner = user_identified->get_banner_url(4096);
@@ -51,10 +35,6 @@ namespace fixedphilip::discord
                     }
                 }
                 event.reply(dpp::message(std::format(":frame_photo: **| `{}`'s banner is:** {}", user_identified->username, banner)).set_flags(dpp::m_ephemeral));
-            }
-            else
-            {
-                event.reply(dpp::message(":warning: **| An internal error occurred.**").set_flags(dpp::m_ephemeral));
             }
         }
 

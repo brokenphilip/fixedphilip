@@ -7,13 +7,6 @@ namespace fixedphilip::discord
 	{
 		static dpp::task<void> run_calculate(const bot::command::run_event& event)
 		{
-            auto cluster = event.get_bot();
-            if (!cluster)
-            {
-                event.reply(":warning: **| An internal error occurred.**");
-                fixedphilip::log::error("run_calculate: bot was null");
-                co_return;
-            }
             if (auto message_create = event.get_message_create())
             {
                 event.reply_not_impl_use_other();
@@ -22,44 +15,35 @@ namespace fixedphilip::discord
 
             auto thinking = event.co_thinking_start();
 
-            if (auto slash_command = event.get_slash_command())
+            auto expression = std::get<std::string>(event.get_slash_command()->get_parameter("expression"));
+            auto decimals = event.try_get_command_parameter<int64_t>("decimals", 2);
+            auto separate = event.try_get_command_parameter<bool>("separate", true);
+
+            int error = 0;
+            auto result = te_interp(expression.c_str(), &error);
+            if (error)
             {
-                auto expression = std::get<std::string>(slash_command->get_parameter("expression"));
-                auto decimals = event.try_get_command_parameter<int64_t>("decimals", 2);
-                auto separate = event.try_get_command_parameter<bool>("separate", true);
+                co_await thinking;
+                event.thinking_end(std::format(":x: **| Error parsing expression:**\n```\n{}\n{}\n```", expression, std::string(error, ' ') + "↑"));
+            }
+            else
+            {
+                std::string result_str = fixedphilip::math::format_number(result, decimals, separate);
 
-                int error = 0;
-                auto result = te_interp(expression.c_str(), &error);
-                if (error)
-                {
-                    co_await thinking;
-                    event.thinking_end(std::format(":x: **| Error parsing expression:**\n```\n{}\n{}\n```", expression, std::string(error, ' ') + "↑"));
-                }
-                else
-                {
-                    std::string result_str = fixedphilip::math::format_number(result, decimals, separate);
-
-                    co_await thinking;
-                    event.thinking_end(std::format("### :abacus: **| Result:**\n> {} = **{}**", dpp::utility::markdown_escape(expression, true), result_str));
-                }
+                co_await thinking;
+                event.thinking_end(std::format("### :abacus: **| Result:**\n> {} = **{}**", dpp::utility::markdown_escape(expression, true), result_str));
             }
 		}
 
 		static dpp::task<void> run_convert(const bot::command::run_event& event)
 		{
-            auto cluster = event.get_bot();
-            if (!cluster)
-            {
-                event.reply(":warning: **| An internal error occurred.**");
-                fixedphilip::log::error("run_convert: bot was null");
-                co_return;
-            }
             if (auto message_create = event.get_message_create())
             {
                 event.reply_not_impl_use_other();
                 co_return;
             }
 
+            auto cluster = event.get_bot();
             auto thinking = event.co_thinking_start();
 
             static auto next_call = std::chrono::minutes(1);
@@ -103,39 +87,37 @@ namespace fixedphilip::discord
             exit_update_currencies:
 
             std::string response;
-            if (auto slash_command = event.get_slash_command())
-            {
-                auto value = std::get<std::string>(slash_command->get_parameter("value"));
-                auto to = std::get<std::string>(slash_command->get_parameter("to"));
-                auto decimals = event.try_get_command_parameter<int64_t>("decimals", 2);
-                auto separate = event.try_get_command_parameter<bool>("separate", true);
-                try
-                {
-                    std::string result, family;
-                    fixedphilip::math::conversion::convert(value, to, decimals, separate, &result, &family);
-                    response = "### :repeat: | " + family + ":\n> " + dpp::utility::markdown_escape(result, true);
-                }
-                catch (fixedphilip::math::conversion::error& e)
-                {
-                    response = std::format(
-                        ":x: **| Conversion error:** {}\n"
-                        "> -# **Common reasons:**\n"
-                        "> -# \\- Missing space between number and unit\n"
-                        "> -# eg. `15min`\n"
-                        "> -# \\- Incompatible units\n"
-                        "> -# eg. `15 min to km` or `15 min 30 km/h`\n"
-                        "> -# \\- Duplicate destination (\"to\") units\n"
-                        "> -# eg. `15 min to sec sec`\n"
-                        "> -# \\- Unknown or missing unit(s)\n"
-                        "> -# eg. `15 to sec` or `15 min to blabla`",
-                        e.what());
-                }
-                catch (std::exception& e)
-                {
-                    response = std::format(":x: **| General error:** {}", e.what());
-                }
-            }
 
+            auto value = std::get<std::string>(event.get_slash_command()->get_parameter("value"));
+            auto to = std::get<std::string>(event.get_slash_command()->get_parameter("to"));
+            auto decimals = event.try_get_command_parameter<int64_t>("decimals", 2);
+            auto separate = event.try_get_command_parameter<bool>("separate", true);
+            try
+            {
+                std::string result, family;
+                fixedphilip::math::conversion::convert(value, to, decimals, separate, &result, &family);
+                response = "### :repeat: | " + family + ":\n> " + dpp::utility::markdown_escape(result, true);
+            }
+            catch (fixedphilip::math::conversion::error& e)
+            {
+                response = std::format(
+                    ":x: **| Conversion error:** {}\n"
+                    "> -# **Common reasons:**\n"
+                    "> -# \\- Missing space between number and unit\n"
+                    "> -# eg. `15min`\n"
+                    "> -# \\- Incompatible units\n"
+                    "> -# eg. `15 min to km` or `15 min 30 km/h`\n"
+                    "> -# \\- Duplicate destination (\"to\") units\n"
+                    "> -# eg. `15 min to sec sec`\n"
+                    "> -# \\- Unknown or missing unit(s)\n"
+                    "> -# eg. `15 to sec` or `15 min to blabla`",
+                    e.what());
+            }
+            catch (std::exception& e)
+            {
+                response = std::format(":x: **| General error:** {}", e.what());
+            }
+            
             co_await thinking;
             event.thinking_end(response);
 		}

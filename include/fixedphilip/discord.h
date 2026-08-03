@@ -88,6 +88,8 @@ namespace fixedphilip::discord
 				// For any type of command (including old-style commands), get the underlying event dispatch
 				const dpp::event_dispatch_t& event_dispatch() const;
 
+				dpp::user get_command_invoker() const;
+
 				void reply(const dpp::message& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const;
 				inline void reply(const std::string& msg, dpp::command_completion_event_t callback = dpp::utility::log_error()) const { reply(dpp::message(msg), callback); }
 
@@ -113,13 +115,12 @@ namespace fixedphilip::discord
 				template <typename T>
 				T try_get_command_parameter(const std::string& param_name, T default_value) const
 				{
-					auto interaction = get_interaction_create();
-					if (!interaction)
+					if (auto message_create = get_message_create())
 					{
 						// todo
 						return default_value;
 					}
-					if (auto param = interaction->get_parameter(param_name); auto value = std::get_if<T>(&param))
+					else if (auto param = get_interaction_create()->get_parameter(param_name); auto value = std::get_if<T>(&param))
 					{
 						return *value;
 					}
@@ -210,7 +211,6 @@ namespace fixedphilip::discord
 		void create_commands_async();
 		void fetch_app_info_async();
 
-		std::filesystem::path data_folder_id(dpp::snowflake id);
 		fixedphilip::file::settings data_file_settings(dpp::snowflake id, const std::string& name);
 	public:
 		bot(const std::string& token, const bot_settings& settings, uint32_t intents = dpp::i_default_intents,
@@ -263,6 +263,9 @@ namespace fixedphilip::discord
 		// The maximum value can be found under settings()
 		uintmax_t data_size_id(dpp::snowflake id);
 
+		// Given an ID, return the respective bot data folder
+		std::filesystem::path data_folder_id(dpp::snowflake id);
+
 		// Server and user counts, for the servers the bot is currently in, as well as all the (guild and user install) users it can see
 		struct counts
 		{
@@ -291,7 +294,7 @@ namespace fixedphilip::discord
 		auto cluster = result.bot;
 		if (result.is_error())
 		{
-			auto error = std::format("{}: {}", log_prefix, result.get_error().human_readable);
+			auto error = std::format("{} - {}", log_prefix, result.get_error().human_readable);
 			if (cluster)
 			{
 				cluster->log(dpp::ll_error, error);
@@ -308,16 +311,6 @@ namespace fixedphilip::discord
 			return value;
 		}
 
-		// TODO: is this unreachable?
-		auto error = std::format("{}: unknown error (wrong result.value type)", log_prefix);
-		if (cluster)
-		{
-			result.bot->log(dpp::ll_error, error);
-		}
-		else
-		{
-			fixedphilip::log::error(error);
-		}
-		return nullptr;
+		throw std::logic_error(std::format("{} - wrong result.value type T"));
 	}
 }

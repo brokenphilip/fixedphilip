@@ -118,11 +118,14 @@ namespace fixedphilip::file
 	uintmax_t get_folder_size(const std::filesystem::path& folder)
 	{
 		uintmax_t size = 0;
-		for (auto& entry : std::filesystem::recursive_directory_iterator(folder))
+		if (std::filesystem::exists(folder) && std::filesystem::is_directory(folder))
 		{
-			if (entry.is_regular_file())
+			for (auto& entry : std::filesystem::recursive_directory_iterator(folder))
 			{
-				size += entry.file_size();
+				if (entry.is_regular_file())
+				{
+					size += entry.file_size();
+				}
 			}
 		}
 		return size;
@@ -136,10 +139,10 @@ namespace fixedphilip::file
 		{
 			if (size < 1'024.0)
 			{
-				return std::format("{} {}B", size, levels[i]);
+				return std::format("{:.2f} {}B", size, levels[i]);
 			}
 			size /= 1'024.0;
 		}
-		return std::format("{} PiB", size);
+		return std::format("{:.2f} PiB", size);
 	}
 }
