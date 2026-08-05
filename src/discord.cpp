@@ -282,7 +282,7 @@ namespace fixedphilip::discord
                 co_return;
             }
             cluster->ready_init_done_ = true;
-            cluster->log(dpp::ll_info, std::format("Connected and logged in as: {} ({})", cluster->me.format_username(), cluster->me.id));
+            cluster->log(dpp::ll_info, std::format("Connected and logged in as: {} ({})", cluster->me.format_username(), std::to_string(cluster->me.id)));
             cluster->create_commands_async();
         }
     }
@@ -387,9 +387,110 @@ namespace fixedphilip::discord
                         });
                         if (module_command == cluster->module_commands_.end())
                         {
+                            // TODO: unreachable?
                             cluster->log(dpp::ll_error, std::format("Module command '{}' not found", command.name));
                             continue;
                         }
+
+                        auto event_router = [prefix = cluster->settings().prefix, &command = *module_command]
+                                            (const auto& event) -> dpp::task<void>
+                        {
+                            using T = std::decay_t<decltype(event)>;
+
+                            if constexpr (std::is_same_v<T, dpp::message_create_t>)
+                            {
+                                // we don't want bots to run our commands
+                                if (event.msg.author.is_bot())
+                                {
+                                    co_return;
+                                }
+
+                                if (!prefix.empty())
+                                {
+                                    auto chat_command = std::format("{}{}", prefix, command.name);
+                                    if (event.msg.content == chat_command)
+                                    {
+                                        co_await run_fn(fixedphilip::discord::bot::command::run_event(event, {}));
+                                    }
+                                    else if (event.msg.content.starts_with(chat_command + " "))
+                                    {
+                                        auto chat_tokens = fixedphilip::utils::string::split_by_whitespace(event.msg.content);
+                                        std::vector<dpp::command_data_option> options;
+
+                                        // tooooooooooooooooo doooooooooooooooooo
+
+                                        /*
+                                        
+                                            if core_cmd.options.size == 0, don't bother checking for chat tokens
+
+                                            if core_cmd.options.size > 0, there are two possibilities:
+                                            - if the first option is a subcmd (group), all the others are too
+                                            - if it's not, all the options are params
+
+                                            if core_cmd.options[i] is a subcmd group, all of its options must be subcmds, and all subcmd options must be params
+
+                                            if core_cmd.options[i] is a subcmd, all of its options must be params
+
+                                        */
+
+
+                                        // buckle up
+                                        if (chat_tokens.size() > 1)
+                                        {
+                                            // iterate through level 1 options - can be subcmd groups, subcmds or params
+                                            for (auto& level_1_option : command.options)
+                                            {
+                                                // if this level 1 option is a subcmd group and we have matching chat input
+                                                // ...as well as any extra parameters (groups can't be executed on their own)
+                                                if (level_1_option.type == dpp::co_sub_command_group && 
+                                                    chat_tokens[1] == level_1_option.name &&
+                                                    chat_tokens.size() > 2)
+                                                {
+                                                    // we know for a fact all level 2 options will be subcommands, and that there must be at least one
+                                                    for (auto& level_2_option : level_1_option.options)
+                                                    {
+                                                        if (chat_tokens[2] == level_2_option.name)
+                                                        {
+                                                            // a subcommand may or may not have options, but we check them anyway
+                                                            for (auto& level_3_option : level_2_option.options)
+                                                            {
+
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                // otherwise, if this level 1 option is a subcmd and we have matching chat input
+                                                else if (level_1_option.type == dpp::co_sub_command &&
+                                                    chat_tokens[1] == level_1_option.name)
+                                                {
+                                                    // a subcommand may or may not have options, but we check them anyway
+                                                    for (auto& level_2_option : level_1_option.options)
+                                                    {
+
+                                                    }
+                                                }
+                                                // if we haven't matched this level 1 option with a subcmd group or a subcmd,
+                                                // ...make sure it's neither of these before proceeding to check for params
+                                                else if (level_1_option.type != dpp::co_sub_command_group &&
+                                                    level_1_option.type != dpp::co_sub_command)
+                                                {
+
+                                                }
+                                                // we know for a fact this is either a subcmd group or a subcmd, but we didn't match it yet
+                                                // ...so just continue iterating through level 1 options in hopes that we land on either of them
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else // all other slashcommand-based events
+                            {
+                                if (event.command.get_command_name() == command.name)
+                                {
+                                    co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                                }
+                            }
+                        };
 
                         module_command->snowflake = snowflake;
                         if (module_command->type == dpp::ctxm_chat_input)
@@ -398,7 +499,10 @@ namespace fixedphilip::discord
                                 [name = module_command->name, run_fn = module_command->get_run_fn()]
                                 (const dpp::slashcommand_t& event) -> dpp::task<void>
                             {
-                                if (event.command.get_command_name() == name) co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                                if (event.command.get_command_name() == name)
+                                {
+                                    co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                                }
                             });
 
                             if ((cluster->intents & dpp::i_message_content) != 0)
@@ -416,9 +520,13 @@ namespace fixedphilip::discord
                                     if (!prefix.empty())
                                     {
                                         auto command = std::format("{}{}", prefix, name);
-                                        if (event.msg.content == command || event.msg.content.starts_with(command + " "))
+                                        if (event.msg.content == command)
                                         {
-                                            co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                                            co_await run_fn(fixedphilip::discord::bot::command::run_event(event, {}));
+                                        }
+                                        else if (event.msg.content.starts_with(command + " "))
+                                        {
+                                            std::vector<dpp::command_data_option> options;
                                         }
                                     }
                                 });
@@ -444,6 +552,7 @@ namespace fixedphilip::discord
                         }
                         else
                         {
+                            // TODO: most likely unreachable
                             cluster->log(dpp::ll_error, std::format("Command '{}' is of invalid type", module_command->name));
                             cluster->module_commands_.erase(module_command);
                         }

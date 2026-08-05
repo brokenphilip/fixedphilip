@@ -142,8 +142,7 @@ namespace fixedphilip::discord
                     id = std::get<dpp::snowflake>(slash_command->get_parameter("who"));
                     user = dpp::find_user(id);
 
-                    is_user:
-
+                is_user:
                     if (slash_command->command.usr.id == id)
                     {
                         // users can run this command on themselves
@@ -164,8 +163,7 @@ namespace fixedphilip::discord
                     }
                     guild = dpp::find_guild(id);
 
-                    is_guild:
-
+                is_guild:
                     if (slash_command->command.get_resolved_permission(slash_command->command.usr.id).can(dpp::p_manage_guild))
                     {
                         // those that can invite bots can run this command
@@ -269,7 +267,7 @@ namespace fixedphilip::discord
             std::vector<dpp::command_option> storage_subcmd_groups = 
             {
                 {dpp::co_sub_command_group, "usage", "Get usage/quota info for an ID"},
-                {dpp::co_sub_command_group, "erase", "Erase all bot data for an ID"}
+                {dpp::co_sub_command_group, "erase", "Erase all bot data for an ID"},
             };
             std::vector<dpp::command_option> storage_subcmds = 
             {

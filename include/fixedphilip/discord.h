@@ -72,9 +72,18 @@ namespace fixedphilip::discord
 		// - "MESSAGE" ie. (right-click) message context menu commands
 		class command : public dpp::slashcommand
 		{
+			using run_event_t = std::variant<dpp::slashcommand_t, dpp::message_create_t, dpp::message_context_menu_t, dpp::user_context_menu_t>;
 		public:
-			struct run_event : public std::variant<dpp::slashcommand_t, dpp::message_create_t, dpp::message_context_menu_t, dpp::user_context_menu_t>
+			class run_event : public run_event_t
 			{
+				std::vector<dpp::command_data_option> manual_options_;
+			public:
+				run_event(const dpp::slashcommand_t& slash_command) : run_event_t(slash_command) {}
+				run_event(const dpp::message_context_menu_t& message_context_menu) : run_event_t(message_context_menu) {}
+				run_event(const dpp::user_context_menu_t& user_context_menu) : run_event_t(user_context_menu) {}
+				run_event(const dpp::message_create_t& message_create, const std::vector<dpp::command_data_option>& manual_options)
+					: run_event_t(message_create), manual_options_(manual_options) {}
+
 				bot* get_bot() const;
 
 				inline auto get_slash_command() const { return std::get_if<dpp::slashcommand_t>(this); }
@@ -97,7 +106,7 @@ namespace fixedphilip::discord
 				inline dpp::async<dpp::confirmation_callback_t> co_reply(const std::string& msg) const { return co_reply(dpp::message(msg)); }
 
 				// Remember to use thinking_end() instead of reply() after using thinking_start()
-				// Additionally, if using the coroutine, make sure to co_await its response first
+				// Additionally, if using the coroutine, make sure to co_await before ending the think
 				void thinking_start() const;
 				dpp::async<dpp::confirmation_callback_t> co_thinking_start() const;
 
@@ -107,7 +116,7 @@ namespace fixedphilip::discord
 				// For old-style commands, reply to the user that they should instead use the slash command
 				// For "CHAT_INPUT" commands, reply to the user that they should instead use the old-style command
 				// If old-style commands are disabled, the user simply gets a "not implemented" reply instead
-				// This function is not supported for "MESSAGE" and "USER" commands
+				// This function is not supported for "MESSAGE" and "USER" commands - will throw std::logic_error
 				void reply_not_impl_use_other() const;
 
 				// Given a command parameter name, try to fetch the command parameter value

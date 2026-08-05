@@ -84,8 +84,7 @@ namespace fixedphilip::discord
                 }
             }
 
-            exit_update_currencies:
-
+        exit_update_currencies:
             std::string response;
 
             auto value = std::get<std::string>(event.get_slash_command()->get_parameter("value"));

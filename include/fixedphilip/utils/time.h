@@ -84,18 +84,13 @@ namespace fixedphilip::utils::time
 	template <typename T, typename Duration = std::chrono::microseconds>
 	inline bool run_if_passed(Duration duration)
 	{
-		static auto should_run = false;
 		static stopwatch last_call;
 		if (last_call.elapsed<Duration>() > duration || !last_call.running())
 		{
 			last_call.reset();
 			last_call.start();
-			should_run = true;
+			return true;
 		}
-		else
-		{
-			should_run = false;
-		}
-		return should_run;
+		return false;
 	}
 }
