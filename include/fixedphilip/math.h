@@ -175,9 +175,9 @@ namespace fixedphilip::math
                     { "ha", { "ha", "hectare" }, multiply<10'000.0>, divide<10'000.0> },
                     { "km²", { "sq.km", "sqkm", "km2", "km^2"/*, "square kilometer", "square kilometers", "square kilometre", "square kilometres"*/ }, mega_to_base, base_to_mega },
 
-                    { "in²", { "sq.in", "sqin", "in2", "in^2"/*, "square inch", "square inches"*/ }, multiply<0.00064516>, divide<0.00064516> },
-                    { "ft²", { "sq.ft", "sqft", "ft2", "ft^2"/*, "square foot", "square feet"*/ }, multiply<0.09290304>, divide<0.09290304> },
-                    { "yd²", { "sq.yd", "sqyd", "yd2", "yd^2"/*, "square yard", "square yards"*/ }, multiply<0.83612736>, divide<0.83612736> },
+                    { "in²", { "sq.in", "sqin", "in2", "in^2"/*, "square inch", "square inches"*/ }, divide<1'550.0031000062>, multiply<1'550.0031000062> },
+                    { "ft²", { "sq.ft", "sqft", "ft2", "ft^2"/*, "square foot", "square feet"*/ }, divide<10.7639104167>, multiply<10.7639104167> },
+                    { "yd²", { "sq.yd", "sqyd", "yd2", "yd^2"/*, "square yard", "square yards"*/ }, divide<1.1959900463>, multiply<1.1959900463> },
                     { "ac", { "ac", "acre" }, multiply<4'046.8564224>, divide<4'046.8564224> },
                     { "mi²", { "sq.mi", "sqmi", "mi2", "mi^2"/*, "square mile", "square miles"*/ }, multiply<2'589'988.110336>, divide<2'589'988.110336> },
 
@@ -214,9 +214,9 @@ namespace fixedphilip::math
                     { "m", { "m", "meter", "meters", "metre", "metres" } },
                     { "km", { "km", "kilometer", "kilometers", "kilometre", "kilometres" }, kilo_to_base, base_to_kilo },
 
-                    { "in", { "in", "inch", "inches", "\"" }, multiply<0.0254>, divide<0.0254> },
-                    { "ft", { "ft", "foot", "feet", "'" }, multiply<0.3048>, divide<0.3048> },
-                    { "yd", { "yd", "yard", "yards" }, multiply<0.9144>, divide<0.9144> },
+                    { "in", { "in", "inch", "inches", "\"" }, divide<39.3700787402>, multiply<39.3700787402> },
+                    { "ft", { "ft", "foot", "feet", "'" }, divide<3.280839895>, multiply<3.280839895> },
+                    { "yd", { "yd", "yard", "yards" }, divide<1.0936132983>, multiply<1.0936132983> },
                     { "mi", { "mi", "mile", "miles" }, multiply<1609.344>, divide<1609.344> },
 
                     { "nmi", { "nmi", "nm"/*, "nautical mile", "nautical miles"*/ }, multiply<1'852.0>, divide<1'852.0> },
@@ -270,6 +270,22 @@ namespace fixedphilip::math
                     { "calendar month(s)", { "cmo"/*, "calendar month", "calendar months"*/ }, multiply<(365.0 / 12) * 86'400>, divide<(365.0 / 12) * 86'400> },
                     { "solar year(s)", { "y", "yr", "yrs", "sy", "syr", "syrs", "year", "years"/*, "solar year", "solar years"*/ }, multiply<365.25 * 86'400>, divide<365.25 * 86'400> },
                     { "calendar year(s)", { "cy", "cyr", "cyrs"/*, "calendar year", "calendar years"*/ }, multiply<365.0 * 86'400>, divide<365.0 * 86'400> },
+                }
+            },
+            { "Volume",
+                {
+                    { "mm³", { "mm3", "mm^3"/*, "cubic millimeter", "cubic millimeters", "cubic millimetre", "cubic millimetres"*/ }, nano_to_base, base_to_nano },
+                    { "cm³", { "cm3", "cm^3"/*, "cubic centimeter", "cubic centimeters", "cubic centimetre", "cubic centimetres"*/ }, micro_to_base, base_to_micro },
+                    { "dm³", { "dm3", "dm^3"/*, "cubic decimeter", "cubic decimeters", "cubic decimetre", "cubic decimetres"*/ }, milli_to_base, base_to_milli },
+                    { "m³", { "m3", "m^3"/*, "cubic meter", "cubic meters", "cubic metre", "cubic metres"*/ } },
+                    { "km³", { "km3", "km^3"/*, "cubic kilometer", "cubic kilometers", "cubic kilometre", "cubic kilometres"*/ }, giga_to_base, base_to_giga },
+
+                    { "in³", { "in3", "in^3"/*, "cubic inch", "cubic inches"*/ }, divide<61023.744094732>, multiply<61023.744094732> },
+                    { "ft³", { "ft3", "ft^3"/*, "cubic foot", "cubic feet"*/ }, divide<35.3146667215>, multiply<35.3146667215> },
+                    { "yd³", { "yd3", "yd^3"/*, "cubic yard", "cubic yards"*/ }, divide<1.3079506193>, multiply<1.3079506193> },
+                    { "mi³", { "mi3", "mi^3"/*, "cubic mile", "cubic miles"*/ }, multiply<4'168'181'825.4406>, divide<4'168'181'825.4406> },
+
+                    { "Hu³", { "hu3", "hu^3"/*, "cubic hammer unit", "cubic hammer units"*/ }, divide<144'648.5581104125>, multiply<144'648.5581104125> },
                 }
             },
         };
