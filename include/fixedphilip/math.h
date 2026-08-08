@@ -280,6 +280,9 @@ namespace fixedphilip::math
                     { "m³", { "m3", "m^3"/*, "cubic meter", "cubic meters", "cubic metre", "cubic metres"*/ } },
                     { "km³", { "km3", "km^3"/*, "cubic kilometer", "cubic kilometers", "cubic kilometre", "cubic kilometres"*/ }, giga_to_base, base_to_giga },
 
+                    { "l", { "l", "litre", "liter", "litres", "liters" }, milli_to_base, base_to_milli },
+                    // todo: others
+
                     { "in³", { "in3", "in^3"/*, "cubic inch", "cubic inches"*/ }, divide<61023.744094732>, multiply<61023.744094732> },
                     { "ft³", { "ft3", "ft^3"/*, "cubic foot", "cubic feet"*/ }, divide<35.3146667215>, multiply<35.3146667215> },
                     { "yd³", { "yd3", "yd^3"/*, "cubic yard", "cubic yards"*/ }, divide<1.3079506193>, multiply<1.3079506193> },
