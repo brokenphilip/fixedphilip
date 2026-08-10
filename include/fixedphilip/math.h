@@ -236,8 +236,8 @@ namespace fixedphilip::math
                     { "oz", { "oz", "ounce", "ounces" }, multiply<28.34952>, divide<28.34952> },
                     { "lb", { "lb", "lbs", "pound", "pounds" }, multiply<493.59237>, divide<493.59237> },
                     { "st", { "st", "stone", "stones" }, multiply<6'350.29497>, divide<6'350.29497> },
-                    //{ "long ton(s)", { "long ton", "long tons", "imperial ton", "imperial tons", "british ton", "british tos", "displacement ton", "displacement tons" }, divide<1'016'047.0>, multiply<1'016'047.0> },
-                    //{ "short ton(s)", { "short ton", "short tons", "tn", "st", "us ton", "us tons" }, divide<907'180.0>, multiply<907'180.0> },
+                    { "long ton(s)", { /*"long ton", "long tons",*/ "lt"/*, "imperial ton", "imperial tons", "british ton", "british tos", "displacement ton", "displacement tons"*/ }, divide<1'016'047.0>, multiply<1'016'047.0> },
+                    { "short ton(s)", { /*"short ton", "short tons",*/ "tn", "st"/*, "us ton", "us tons"*/ }, divide<907'180.0>, multiply<907'180.0> },
                 }
             },
             { "Speed",
@@ -280,9 +280,26 @@ namespace fixedphilip::math
                     { "m³", { "m3", "m^3"/*, "cubic meter", "cubic meters", "cubic metre", "cubic metres"*/ } },
                     { "km³", { "km3", "km^3"/*, "cubic kilometer", "cubic kilometers", "cubic kilometre", "cubic kilometres"*/ }, giga_to_base, base_to_giga },
 
+                    { "ml", { "ml", "millilitre", "milliliter", "millilitres", "milliliters" }, micro_to_base, base_to_micro },
+                    { "cl", { "cl", "centilitre", "centiliter", "centilitres", "centiliters" }, divide<100'000.0>, multiply<100'000.0> },
+                    { "dl", { "dl", "decilitre", "deciliter", "decilitres", "deciliters" }, divide<10'000.0>, multiply<10'000.0> },
                     { "l", { "l", "litre", "liter", "litres", "liters" }, milli_to_base, base_to_milli },
-                    // todo: others
+                    { "tbsp (metric)", { "tbsp", "tbsp"/*, "tablespoon", "tablespoons"*/ }, divide<200'000 / 3.0>, multiply<200'000 / 3.0> },
 
+                    { "tbsp (US)", { "ustbsp"/*, "us tbsp", "us tablespoon", "us tablespoons"*/ }, divide<67'628.0454>, multiply<67'628.0454> },
+                    { "fl oz (US)", { "floz", "usfloz"/*, "fl oz", "us fl oz", "us fluid ounce", "us fluid ounces"*/ }, divide<33'814.022702>, multiply<33'814.022702> },
+                    { "cup (US)", { "cup", "cups", "uscup"/*, "us cup", "us cups"*/ }, divide<4'226.752838>, multiply<4'226.752838> },
+                    { "pt (US)", { "pt", "uspt", "pint", "pints"/*, "us pint", "us pints"*/ }, divide<2'113.376419>, multiply<2'113.376419> },
+                    { "qt (US)", { "qt", "usqt", "quart", "quarts"/*, "us quart", "us quarts"*/ }, divide<1'056.688209>, multiply<1'056.688209> },
+                    { "gal (US)", { "gal", "usgal" "gallon", "gallons"/*, "us gallon", "us gallons"*/ }, divide<264.1720523581>, multiply<264.1720523581> },
+
+                    { "tbsp (imp)", { "imptbsp"/*, "imp tbsp", "imperial tablespoon", "imperial tablespoons"*/ }, divide<56'312.104>, multiply<56'312.104> },
+                    { "fl oz (imp)", { "impfloz"/*, "imp fl oz", "imperial fluid ounce", "imperial fluid ounces"*/ }, divide<35'195.079727854>, multiply<35'195.079727854> },
+                    { "cup (imp)", { "impcup"/*, "imperial cup", "imperial cups"*/ }, divide<3'519.5079727854>, multiply<3'519.5079727854> },
+                    { "pt (imp)", { "imppt"/*, "imperial pint", "imperial pints"*/ }, divide<1'759.7539863927>, multiply<1'759.7539863927> },
+                    { "qt (imp)", { "impqt"/*, "imperial quart", "imperial quarts"*/ }, divide<879.877>, multiply<879.877> },
+                    { "gal (imp)", { "impgal"/*, "imperial gallon", "imperial gallons"*/ }, divide<219.9692483>, multiply<219.9692483> },
+                    
                     { "in³", { "in3", "in^3"/*, "cubic inch", "cubic inches"*/ }, divide<61023.744094732>, multiply<61023.744094732> },
                     { "ft³", { "ft3", "ft^3"/*, "cubic foot", "cubic feet"*/ }, divide<35.3146667215>, multiply<35.3146667215> },
                     { "yd³", { "yd3", "yd^3"/*, "cubic yard", "cubic yards"*/ }, divide<1.3079506193>, multiply<1.3079506193> },
