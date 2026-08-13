@@ -231,7 +231,7 @@ namespace fixedphilip::math
                     { "mg", { "mg", "milligram", "milligrams" }, milli_to_base, base_to_milli },
                     { "g", { "g", "gram", "grams" } },
                     { "kg", { "kg", "kilogram", "kilograms" }, kilo_to_base, base_to_kilo },
-                    { "t", { "t", "ton", "tonne"/*, "metric ton"*/ }, mega_to_base, base_to_mega }, // todo - use this for long/short ton?
+                    { "t", { "t", "ton", "tonne"/*, "metric ton"*/ }, mega_to_base, base_to_mega },
 
                     { "oz", { "oz", "ounce", "ounces" }, multiply<28.34952>, divide<28.34952> },
                     { "lb", { "lb", "lbs", "pound", "pounds" }, multiply<493.59237>, divide<493.59237> },

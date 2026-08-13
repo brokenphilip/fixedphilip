@@ -22,12 +22,12 @@ namespace fixedphilip::discord
 
     bool bot_settings::json_to_struct(const nlohmann::json& data)
     {
-        fixedphilip::file::json_try_at(data, "prefix", prefix);
-        fixedphilip::file::json_try_at(data, "disabled_modules", disabled_modules);
-        fixedphilip::file::json_try_at(data, "data_folder", data_folder);
+        fixedphilip::file::json_try_at(data, "prefix", prefix, true);
+        fixedphilip::file::json_try_at(data, "disabled_modules", disabled_modules, true);
+        fixedphilip::file::json_try_at(data, "data_folder", data_folder, true);
 
         std::string max_data_size_id_str;
-        if (fixedphilip::file::json_try_at(data, "max_data_size_id", max_data_size_id_str))
+        if (fixedphilip::file::json_try_at(data, "max_data_size_id", max_data_size_id_str, true))
         {
             try
             {
@@ -42,7 +42,7 @@ namespace fixedphilip::discord
         }
 
         std::string max_data_size_total_str;
-        if (fixedphilip::file::json_try_at(data, "max_data_size_total", max_data_size_total_str))
+        if (fixedphilip::file::json_try_at(data, "max_data_size_total", max_data_size_total_str, true))
         {
             try
             {
@@ -56,7 +56,7 @@ namespace fixedphilip::discord
             }
         }
 
-        // partial load is okay (though this retval is ignored anyways)
+        // partial load is okay
         return true;
     }
 
@@ -72,8 +72,9 @@ namespace fixedphilip::discord
 
     bool bot::config::json_to_struct(const nlohmann::json& data)
     {
+        // create a copy of the data we will pass down to settings, but without the token
         auto data_copy = data;
-        fixedphilip::file::json_try_at(data_copy, "token", token);
+        bool token_valid = fixedphilip::file::json_try_at(data_copy, "token", token, true);
         data_copy.erase("token");
         return settings.json_to_struct(data_copy);
     }
@@ -252,7 +253,9 @@ namespace fixedphilip::discord
         }
         else if (auto message_create = get_message_create())
         {
-            auto name = message_create->msg.content.substr(prefix.length());
+            auto prefix_len = prefix.length();
+            auto name = message_create->msg.content.substr(prefix_len, message_create->msg.content.find(' ') - prefix_len);
+
             auto snowflake = cluster->slash_command_snowflake(name);
             if (snowflake == dpp::snowflake(0))
             {
@@ -385,15 +388,10 @@ namespace fixedphilip::discord
                         {
                             return command.name == other.name && command.type == other.type;
                         });
-                        if (module_command == cluster->module_commands_.end())
-                        {
-                            // TODO: unreachable?
-                            cluster->log(dpp::ll_error, std::format("Module command '{}' not found", command.name));
-                            continue;
-                        }
 
-                        auto event_router = [prefix = cluster->settings().prefix, &command = *module_command]
-                                            (const auto& event) -> dpp::task<void>
+                        // note that we're creating a copy of the module command, not keeping a reference to it,
+                        // ...because this lambda will run asynchronously at a later point, and the references would dangle in that case
+                        auto event_router_async = [prefix = cluster->settings().prefix, command = *module_command](const auto& event) -> dpp::task<void>
                         {
                             using T = std::decay_t<decltype(event)>;
 
@@ -410,17 +408,19 @@ namespace fixedphilip::discord
                                     auto chat_command = std::format("{}{}", prefix, command.name);
                                     if (event.msg.content == chat_command)
                                     {
-                                        co_await run_fn(fixedphilip::discord::bot::command::run_event(event, {}));
+                                        co_await command.run(fixedphilip::discord::bot::command::run_event(event, {}));
                                     }
                                     else if (event.msg.content.starts_with(chat_command + " "))
                                     {
+                                        // the first token will always be the command itself, since slashcommands can't have spaces
+                                        // message/user context menu commands can, however, have spaces, but we don't care about those here
                                         auto chat_tokens = fixedphilip::utils::string::split_by_whitespace(event.msg.content);
                                         std::vector<dpp::command_data_option> options;
 
-                                        // tooooooooooooooooo doooooooooooooooooo
-
                                         /*
                                         
+                                            TODO
+
                                             if core_cmd.options.size == 0, don't bother checking for chat tokens
 
                                             if core_cmd.options.size > 0, there are two possibilities:
@@ -433,122 +433,42 @@ namespace fixedphilip::discord
 
                                         */
 
-
-                                        // buckle up
-                                        if (chat_tokens.size() > 1)
-                                        {
-                                            // iterate through level 1 options - can be subcmd groups, subcmds or params
-                                            for (auto& level_1_option : command.options)
-                                            {
-                                                // if this level 1 option is a subcmd group and we have matching chat input
-                                                // ...as well as any extra parameters (groups can't be executed on their own)
-                                                if (level_1_option.type == dpp::co_sub_command_group && 
-                                                    chat_tokens[1] == level_1_option.name &&
-                                                    chat_tokens.size() > 2)
-                                                {
-                                                    // we know for a fact all level 2 options will be subcommands, and that there must be at least one
-                                                    for (auto& level_2_option : level_1_option.options)
-                                                    {
-                                                        if (chat_tokens[2] == level_2_option.name)
-                                                        {
-                                                            // a subcommand may or may not have options, but we check them anyway
-                                                            for (auto& level_3_option : level_2_option.options)
-                                                            {
-
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                // otherwise, if this level 1 option is a subcmd and we have matching chat input
-                                                else if (level_1_option.type == dpp::co_sub_command &&
-                                                    chat_tokens[1] == level_1_option.name)
-                                                {
-                                                    // a subcommand may or may not have options, but we check them anyway
-                                                    for (auto& level_2_option : level_1_option.options)
-                                                    {
-
-                                                    }
-                                                }
-                                                // if we haven't matched this level 1 option with a subcmd group or a subcmd,
-                                                // ...make sure it's neither of these before proceeding to check for params
-                                                else if (level_1_option.type != dpp::co_sub_command_group &&
-                                                    level_1_option.type != dpp::co_sub_command)
-                                                {
-
-                                                }
-                                                // we know for a fact this is either a subcmd group or a subcmd, but we didn't match it yet
-                                                // ...so just continue iterating through level 1 options in hopes that we land on either of them
-                                            }
-                                        }
+                                        co_await command.run(fixedphilip::discord::bot::command::run_event(event, options));
                                     }
                                 }
                             }
-                            else // all other slashcommand-based events
+                            else if constexpr (std::is_base_of_v<dpp::interaction_create_t, T>)
                             {
                                 if (event.command.get_command_name() == command.name)
                                 {
-                                    co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
+                                    co_await command.run(fixedphilip::discord::bot::command::run_event(event));
                                 }
+                            }
+                            else
+                            {
+                                // can't use false here, or it will never compile (as always, thanks raymond chen :3)
+                                // https://devblogs.microsoft.com/oldnewthing/20200311-00/?p=103553
+                                static_assert(!sizeof(T*), "Unsupported type T");
                             }
                         };
 
                         module_command->snowflake = snowflake;
                         if (module_command->type == dpp::ctxm_chat_input)
                         {
-                            module_command->event_handles[0] = cluster->on_slashcommand.attach(
-                                [name = module_command->name, run_fn = module_command->get_run_fn()]
-                                (const dpp::slashcommand_t& event) -> dpp::task<void>
-                            {
-                                if (event.command.get_command_name() == name)
-                                {
-                                    co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
-                                }
-                            });
+                            module_command->event_handles[0] = cluster->on_slashcommand.attach(event_router_async);
 
                             if ((cluster->intents & dpp::i_message_content) != 0)
                             {
-                                module_command->event_handles[1] = cluster->on_message_create.attach(
-                                    [prefix = cluster->settings().prefix, name = module_command->name, run_fn = module_command->get_run_fn()]
-                                    (const dpp::message_create_t& event) -> dpp::task<void>
-                                {
-                                    // we don't want bots to run our commands
-                                    if (event.msg.author.is_bot())
-                                    {
-                                        co_return;
-                                    }
-
-                                    if (!prefix.empty())
-                                    {
-                                        auto command = std::format("{}{}", prefix, name);
-                                        if (event.msg.content == command)
-                                        {
-                                            co_await run_fn(fixedphilip::discord::bot::command::run_event(event, {}));
-                                        }
-                                        else if (event.msg.content.starts_with(command + " "))
-                                        {
-                                            std::vector<dpp::command_data_option> options;
-                                        }
-                                    }
-                                });
+                                module_command->event_handles[1] = cluster->on_message_create.attach(event_router_async);
                             }
                         }
                         else if (module_command->type == dpp::ctxm_message)
                         {
-                            module_command->event_handles[0] = cluster->on_message_context_menu.attach(
-                                [name = module_command->name, run_fn = module_command->get_run_fn()]
-                                (const dpp::message_context_menu_t& event) -> dpp::task<void>
-                            {
-                                if (event.command.get_command_name() == name) co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
-                            });
+                            module_command->event_handles[0] = cluster->on_message_context_menu.attach(event_router_async);
                         }
                         else if (module_command->type == dpp::ctxm_user)
                         {
-                            module_command->event_handles[0] = cluster->on_user_context_menu.attach(
-                                [name = module_command->name, run_fn = module_command->get_run_fn()]
-                                (const dpp::user_context_menu_t& event) -> dpp::task<void>
-                            {
-                                if (event.command.get_command_name() == name) co_await run_fn(fixedphilip::discord::bot::command::run_event(event));
-                            });
+                            module_command->event_handles[0] = cluster->on_user_context_menu.attach(event_router_async);
                         }
                         else
                         {
@@ -583,7 +503,7 @@ namespace fixedphilip::discord
 
                 auto& app_owner = app->owner;
                 cluster->app_owner_ = app_owner;
-                cluster->log(dpp::loglevel::ll_info, "Application (instance) owner is: " + app_owner.username);
+                cluster->log(dpp::loglevel::ll_info, std::format("Application (instance) owner is: {} ({})", app_owner.username, std::to_string(app_owner.id)));
 
                 // check for any privileged intents - if we don't have permission to use them, disable them
                 uint32_t intents_to_disable = 0;

@@ -98,11 +98,18 @@ namespace fixedphilip::file
 	// If you're looking for something more compact, use 
 	using json_pretty_print = json<4, ' '>;
 
-	// Helper wrapper function for json.at() with logging output
+	// Helper wrapper function for json.at() with exception handling and logging output
+	// Setting not_found_warning to true will gracefully handle missing keys (instead of an exception)
 	// Returns true if json.at() was successful, false otherwise
 	template <typename T>
-	bool json_try_at(const nlohmann::json& data, const std::string& key, T& member_variable)
+	bool json_try_at(const nlohmann::json& data, const std::string& key, T& member_variable, bool not_found_warning = false)
 	{
+		if (not_found_warning && !data.contains(key))
+		{
+			fixedphilip::log::warning(std::format("'{}' json key not found, using default value instead", key));
+			return false;
+		}
+
 		try
 		{
 			member_variable = data.at(key);
