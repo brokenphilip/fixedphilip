@@ -7,3 +7,9 @@
 [submodule "src/modules/private"]
 	path = src/modules/private
 	url = https://github.com/brokenphilip/fixedphilip_private_modules
+[submodule "bulbtils"]
+	path = bulbtils
+	url = https://github.com/brokenphilip/bulbtils
+[submodule "discofloor"]
+	path = discofloor
+	url = https://github.com/brokenphilip/discofloor

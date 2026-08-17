@@ -6,9 +6,11 @@ set(BOT_NAME "fixedphilip")
 project(${BOT_NAME})
 
 aux_source_directory("src" core_src)
-aux_source_directory("src/modules" core_src_modules)
-aux_source_directory("src/modules/private" core_src_modules_private)
-add_executable(${BOT_NAME} tinyexpr/tinyexpr.c ${core_src} ${core_src_tinyexpr} ${core_src_modules} ${core_src_modules_private})
+aux_source_directory("bulbtils/src" bulbtils_src)
+aux_source_directory("discofloor/src" discofloor_src)
+#aux_source_directory("src/modules" core_src_modules)
+#aux_source_directory("src/modules/private" core_src_modules_private)
+add_executable(${BOT_NAME} tinyexpr/tinyexpr.c ${bulbtils_src} ${discofloor_src} ${core_src} ${core_src_tinyexpr} )#${core_src_modules} ${core_src_modules_private})
 
 target_compile_features(${BOT_NAME} PUBLIC cxx_std_20)
 
@@ -50,6 +52,8 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
 endif()
 
 target_include_directories(${BOT_NAME} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/bulbtils/include
+	${CMAKE_CURRENT_SOURCE_DIR}/discofloor/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${OPENSSL_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/tinyexpr

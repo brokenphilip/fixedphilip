@@ -1,7 +1,8 @@
 #include <fixedphilip/log.h>
 #include <fixedphilip/build.h>
-#include <fixedphilip/discord.h>
 #include <fixedphilip/utils/time.h>
+
+#include <discofloor/bot.h>
 
 bool handle_arg_num(int& num, const std::string& name, char* argv[], int index)
 {
@@ -122,14 +123,33 @@ int main(int argc, char* argv[])
 
     fixedphilip::log::info(std::format("Starting bot with cluster ID {} (out of {})...", cluster_id, max_clusters));
     {
-        fixedphilip::discord::bot::config bot_config;
-        if (!bot_config.load_from_file(config_file))
+        bulbtils::file::settings config_settings
+        {
+            .filename = config_file,
+            .create_if_not_found = true,
+            .warning_callback = fixedphilip::log::warning,
+            .error_callback = fixedphilip::log::error,
+        };
+        discofloor::bot_config bot_config;
+        if (!bot_config.load_check_save(config_settings))
         {
             fixedphilip::log::error("Bot configuration failed - shutting down...");
             return 1;
         }
 
-        fixedphilip::discord::bot bot(bot_config.token, bot_config.settings, intents, total_shards, cluster_id, max_clusters);
+        auto logger = [](const dpp::log_t& event)
+        {
+            // line 195 of cluster.cpp doesn't seem correct... 		dpp::log_t logmsg(nullptr, 0, msg); - why pass nullptr/0 ?! ?! ?!
+            fixedphilip::log::implementation(
+                event.severity,
+                //std::format("Cl: {}, Sh: {}", 
+                //    event.owner ? std::to_string(event.owner->cluster_id) : "N/A", 
+                //    event.shard), 
+                "",
+                event.message);
+        };
+
+        discofloor::bot bot(bot_config, logger, intents, total_shards, cluster_id, max_clusters);
         bot.start();
     }
 
