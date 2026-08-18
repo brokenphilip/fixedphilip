@@ -1,11 +1,13 @@
-#include <fixedphilip/discord.h>
+#include <discofloor/bot.h>
+#include <discofloor/version.h>
+
 #include <fixedphilip/build.h>
 
-namespace fixedphilip::discord
+namespace discofloor
 {
-    class meta_module : public bot::module
+    class meta_module : public module
     {
-        static dpp::task<void> run_shutdown(const bot::command::run_event& event)
+        static dpp::task<void> run_shutdown(const run_event& event)
         {
             auto cluster = event.get_bot();
             if (event.get_command_invoker() == cluster->app_owner())
@@ -23,7 +25,7 @@ namespace fixedphilip::discord
             }
         }
 
-        static dpp::task<void> run_status(const bot::command::run_event& event)
+        static dpp::task<void> run_status(const run_event& event)
         {
             auto cluster = event.get_bot();
             auto thinking = event.co_thinking_start();
@@ -61,10 +63,28 @@ namespace fixedphilip::discord
                 total_user_count = std::to_string(counts.total_users);
             }
 
+            std::string storage_usage = "N/A";
+            try
+            {
+                storage_usage = std::format("{} / {}",
+                    bulbtils::file::size_to_string(cluster->data_size_total()),
+                    bulbtils::file::size_to_string(cluster->settings().max_data_size_total));
+            }
+            catch (std::exception& e)
+            {
+                cluster->log(dpp::ll_error, std::format("status command: Failed to fetch storage usage - {}", e.what()));
+            }
+
             auto embed = dpp::embed()
                 .set_color(0x7F00FF)
                 .set_author(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM), "https://github.com/brokenphilip/fixedphilip", "https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
-                .set_description(std::format("**Built on:** {}\n**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", fixedphilip::build::date_time(), FIXEDPHILIP_BUILD_ARCHITECTURE_NUM))
+                .set_description(
+                    std::format(
+                        "*Powered by discofloor " DISCOFLOOR_VERSION_STRING "*\n\n"
+                        "**Built on:** {}\n"
+                        "**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", 
+                    fixedphilip::build::date_time(), 
+                    FIXEDPHILIP_BUILD_ARCHITECTURE_NUM))
                 .add_field("Instance owner", cluster->app_owner().username)
                 .add_field("Uptime (Ping)", std::format("{} (`{} ms`)", uptime, static_cast<int>(cluster->rest_ping * 1000)))
                 .add_field("User count",
@@ -72,14 +92,12 @@ namespace fixedphilip::discord
                         "\\- {} user{} in {} server{}\n"
                         "\\- {} user install{}\n"
                         "\\- {} total",
-                        user_count, counts.users == 1 ? "" : "s", server_count, counts.servers == 1 ? "" : "s",
-                        user_install_count, counts.user_installs == 1 ? "" : "s",
-                        total_user_count))
+                    user_count, counts.users == 1 ? "" : "s", server_count, counts.servers == 1 ? "" : "s",
+                    user_install_count, counts.user_installs == 1 ? "" : "s",
+                    total_user_count))
                 .add_field("Cluster ID", std::format("`{}` (out of {})", cluster->cluster_id, cluster->maxclusters))
                 .add_field("Shard ID", std::format("`{}` (out of {})", event.event_dispatch().shard, cluster->numshards))
-                .add_field("Storage usage", std::format("{} / {}",
-                    fixedphilip::file::size_to_string(cluster->data_size_total()),
-                    fixedphilip::file::size_to_string(cluster->settings().max_data_size_total)))
+                .add_field("Storage usage", storage_usage)
                 .set_footer(dpp::embed_footer().set_text("Last restarted"))
                 .set_timestamp(cluster->start_time_unix());
 
@@ -89,10 +107,10 @@ namespace fixedphilip::discord
             event.thinking_end(msg);
         }
 
-        static dpp::task<void> run_storage(const bot::command::run_event& event)
+        static dpp::task<void> run_storage(const run_event& event)
         {
             auto cluster = event.get_bot();
-            if (auto message_create = event.get_message_create())
+            if (auto message_create = event.get_message_command())
             {
                 event.reply_not_impl_use_other();
                 co_return;
@@ -179,9 +197,17 @@ namespace fixedphilip::discord
                 {
                     if (subcmd_group.name == "usage")
                     {
-                        event.reply(std::format(":floppy_disk: **| Total storage usage:** {} / {}",
-                            fixedphilip::file::size_to_string(cluster->data_size_total()),
-                            fixedphilip::file::size_to_string(cluster->settings().max_data_size_total)));
+                        try
+                        {
+                            event.reply(std::format(":floppy_disk: **| Total storage usage:** {} / {}",
+                                bulbtils::file::size_to_string(cluster->data_size_total()),
+                                bulbtils::file::size_to_string(cluster->settings().max_data_size_total)));
+                        }
+                        catch (std::exception& e)
+                        {
+                            event.reply(":x: **| Failed to get total storage usage.**");
+                            cluster->log(dpp::ll_error, std::format("storage command: Failed to get total storage usage - {}", e.what()));
+                        }
                     }
                     else if (subcmd_group.name == "erase")
                     {
@@ -220,10 +246,18 @@ namespace fixedphilip::discord
 
                     if (subcmd_group.name == "usage")
                     {
-                        event.reply(std::format(":floppy_disk: **| Storage usage for {}:** {} / {}",
-                            target,
-                            fixedphilip::file::size_to_string(cluster->data_size_id(id)),
-                            fixedphilip::file::size_to_string(cluster->settings().max_data_size_id)));
+                        try
+                        {
+                            event.reply(std::format(":floppy_disk: **| Storage usage for {}:** {} / {}",
+                                target,
+                                bulbtils::file::size_to_string(cluster->data_size_id(id)),
+                                bulbtils::file::size_to_string(cluster->settings().max_data_size_id)));
+                        }
+                        catch (std::exception& e)
+                        {
+                            event.reply(std::format(":x: **| Failed to get storage usage for {}.**", target));
+                            cluster->log(dpp::ll_error, std::format("storage command: Failed to get storage usage for {} - {}", target, e.what()));
+                        }
                     }
                     else if (subcmd_group.name == "erase")
                     {
@@ -258,12 +292,12 @@ namespace fixedphilip::discord
             }
         }
 
-        virtual std::vector<bot::command> commands(bot& bot) override final
+        virtual std::vector<command> commands(bot& bot) override final
         {
-            bot::command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
-            bot::command status("status", "Displays bot status", bot.me.id, run_status);
+            command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
+            command status("status", "Displays bot status", bot.me.id, run_status);
 
-            bot::command storage("storage", "Commands for bot data (storage) management", bot.me.id, run_storage);
+            command storage("storage", "Commands for bot data (storage) management", bot.me.id, run_storage);
             std::vector<dpp::command_option> storage_subcmd_groups = 
             {
                 {dpp::co_sub_command_group, "usage", "Get usage/quota info for an ID"},
@@ -296,7 +330,7 @@ namespace fixedphilip::discord
             return { shutdown, status, storage };
         }
     public:
-        meta_module() : bot::module("meta", "Bot monitoring and management") {}
+        meta_module() : module("meta") {}
     };
     static meta_module instance;
 }

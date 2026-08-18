@@ -1,14 +1,14 @@
-#include <fixedphilip/discord.h>
-#include <fixedphilip/file.h>
+#include <discofloor/bot.h>
+
+#include <bulbtils/string.h>
+
 #include <fixedphilip/build.h>
 
-#include <fixedphilip/utils/string.h>
-
-namespace fixedphilip::discord
+namespace discofloor
 {
-	class presence_module : public bot::module
+	class presence_module : public module
 	{
-		class config : public fixedphilip::file::json_pretty_print
+		class config : public pretty_print_json_file
 		{
 			// just online/idle is functional?
 			const std::unordered_map<dpp::presence_status, std::string> status_to_string
@@ -37,7 +37,7 @@ namespace fixedphilip::discord
 
 			int update_rate_mins = 5;
 
-			virtual nlohmann::json struct_to_json() const override final
+			virtual nlohmann::json struct_to_json(const bulbtils::file::settings& save_settings) const override final
 			{
 				if (activity_type == dpp::at_custom)
 				{
@@ -58,10 +58,10 @@ namespace fixedphilip::discord
 					};
 				}
 			}
-			virtual bool json_to_struct(const nlohmann::json& data) override final
+			virtual bool json_to_struct(const nlohmann::json& data, const bulbtils::file::settings& load_settings) override final
 			{
 				std::string status_string;
-				if (fixedphilip::file::json_try_at(data, "status", status_string, true))
+				if (json_try_at(data, load_settings, "status", status_string, true))
 				{
 					auto it = std::find_if(status_to_string.begin(), status_to_string.end(), [&status_string](const auto& pair)
 					{
@@ -69,7 +69,7 @@ namespace fixedphilip::discord
 					});
 					if (it == status_to_string.end())
 					{
-						fixedphilip::log::error("invalid 'status' (reverting to default) - must be either one of: offline, online, dnd, idle, invisible");
+						load_settings.error("invalid 'status' (reverting to default) - must be either one of: offline, online, dnd, idle, invisible");
 					}
 					else
 					{
@@ -78,7 +78,7 @@ namespace fixedphilip::discord
 				}
 
 				std::string activity_string;
-				if (fixedphilip::file::json_try_at(data, "activity", activity_string, true))
+				if (json_try_at(data, load_settings, "activity", activity_string, true))
 				{
 					auto it = std::find_if(activity_to_string.begin(), activity_to_string.end(), [&activity_string](const auto& pair)
 					{
@@ -98,9 +98,9 @@ namespace fixedphilip::discord
 					}
 				}
 
-				if (fixedphilip::file::json_try_at(data, "update_rate_mins", update_rate_mins, true) && update_rate_mins < 0)
+				if (json_try_at(data, load_settings, "update_rate_mins", update_rate_mins, true) && update_rate_mins < 0)
 				{
-					fixedphilip::log::error("'update_rate_mins' is out of bounds - reverting to default");
+					load_settings.error("'update_rate_mins' is out of bounds - reverting to default");
 					update_rate_mins = 5;
 				}
 
@@ -111,7 +111,9 @@ namespace fixedphilip::discord
 
 		presence_module::config config;
 		//std::shared_mutex config_mutex;
-		dpp::timer timer = SIZE_MAX;
+
+		dpp::timer timer_handle = SIZE_MAX;
+		dpp::event_handle ready_handle = SIZE_MAX;
 
 		void update_presence(bot& bot)
 		{
@@ -133,29 +135,9 @@ namespace fixedphilip::discord
 
 			for (int i = 0; i < token_conversion.size(); i++)
 			{
-				fixedphilip::utils::string::replace_all(activity, token_conversion[i].first, token_conversion[i].second);
+				bulbtils::string::replace_all(activity, token_conversion[i].first, token_conversion[i].second);
 			}
 			bot.set_presence(dpp::presence(status, type, activity));
-		}
-
-		void init_presence(bot& bot)
-		{
-			update_presence(bot);
-
-			int update_rate_mins = config.update_rate_mins;
-			//{
-			//	std::shared_lock _(config_mutex);
-			//	update_rate_mins = config.update_rate_mins;
-			//}
-			if (update_rate_mins > 0)
-			{
-				timer = bot.start_timer([this, &bot](const dpp::timer& timer) -> dpp::task<void>
-				{
-					update_presence(bot);
-					co_return;
-				},
-				60 * update_rate_mins);
-			}
 		}
 
 		static dpp::task<void> ready_event(const dpp::ready_t& event)
@@ -163,11 +145,7 @@ namespace fixedphilip::discord
 			if (dpp::run_once<struct presence_ready_event_init>())
 			{
 				auto cluster = static_cast<bot*>(event.owner);
-				if (!cluster)
-				{
-					fixedphilip::log::error("presence_ready_event_init: owner was null");
-					co_return;
-				}
+
 				presence_module* presence = nullptr;
 				for (auto& module : cluster->loaded_modules())
 				{
@@ -182,7 +160,23 @@ namespace fixedphilip::discord
 					cluster->log(dpp::ll_error, "presence_ready_event_init: presence module was null");
 					co_return;
 				}
-				presence->init_presence(*cluster);
+				
+				presence->update_presence(*cluster);
+
+				int update_rate_mins = presence->config.update_rate_mins;
+				//{
+				//	std::shared_lock _(config_mutex);
+				//	update_rate_mins = config.update_rate_mins;
+				//}
+				if (update_rate_mins > 0)
+				{
+					presence->timer_handle = cluster->start_timer([presence, cluster](const dpp::timer& timer) -> dpp::task<void>
+					{
+						presence->update_presence(*cluster);
+						co_return;
+					},
+					60 * update_rate_mins);
+				}
 			}
 		}
 
@@ -191,25 +185,27 @@ namespace fixedphilip::discord
 			{
 				//std::unique_lock _(config_mutex);
 
-				fixedphilip::file::settings config_settings
+				bulbtils::file::settings config_settings
 				{
 					.filename = "presence.json",
 					.create_if_not_found = true,
-					.log = true,
 				};
+				bot.append_loggers(config_settings);
 
 				auto result = config.load(config_settings);
-				if (result != fixedphilip::file::r_success && result != fixedphilip::file::r_file_not_found)
+				if (result != bulbtils::file::r_success && result != bulbtils::file::r_file_not_found)
 				{
 					return false;
 				}
 			}
-			bot.on_ready.attach(ready_event);
+			ready_handle = bot.on_ready.attach(ready_event);
 			return true;
 		}
 
 		virtual void destroy(bot& bot) override final
 		{
+			bot.on_ready.detach(ready_handle);
+
 			int update_rate_mins = config.update_rate_mins;
 			//{
 			//	std::shared_lock _(config_mutex);
@@ -217,11 +213,11 @@ namespace fixedphilip::discord
 			//}
 			if (update_rate_mins > 0)
 			{
-				bot.stop_timer(timer);
+				bot.stop_timer(timer_handle);
 			}
 		}
 	public:
-		presence_module() : bot::module("presence", "Manages the bot's activity/status presence") {}
+		presence_module() : module("presence") {}
 	};
 	static presence_module instance;
 }

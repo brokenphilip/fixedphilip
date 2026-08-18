@@ -1,13 +1,14 @@
-#include <fixedphilip/discord.h>
+#include <discofloor/bot.h>
+
 #include <fixedphilip/math.h>
 
-namespace fixedphilip::discord
+namespace discofloor
 {
-	class math_module : public bot::module
+	class math_module : public module
 	{
-		static dpp::task<void> run_calculate(const bot::command::run_event& event)
+		static dpp::task<void> run_calculate(const run_event& event)
 		{
-            if (auto message_create = event.get_message_create())
+            if (auto message_create = event.get_message_command())
             {
                 event.reply_not_impl_use_other();
                 co_return;
@@ -35,9 +36,9 @@ namespace fixedphilip::discord
             }
 		}
 
-		static dpp::task<void> run_convert(const bot::command::run_event& event)
+		static dpp::task<void> run_convert(const run_event& event)
 		{
-            if (auto message_create = event.get_message_create())
+            if (auto message_create = event.get_message_command())
             {
                 event.reply_not_impl_use_other();
                 co_return;
@@ -47,7 +48,7 @@ namespace fixedphilip::discord
             auto thinking = event.co_thinking_start();
 
             static auto next_call = std::chrono::minutes(1);
-            if (fixedphilip::utils::time::run_if_passed<struct fetch_currency_json>(next_call))
+            if (bulbtils::time::run_if_passed<struct fetch_currency_json>(next_call))
             {
                 auto request = co_await cluster->co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
                 if (request.error != dpp::h_success)
@@ -121,9 +122,9 @@ namespace fixedphilip::discord
             event.thinking_end(response);
 		}
 
-		virtual std::vector<bot::command> commands(bot& bot) override final
+		virtual std::vector<command> commands(bot& bot) override final
 		{
-			bot::command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate);
+			command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate);
 
 			calculate.add_option(dpp::command_option(dpp::co_string, "expression", "Math expression to calculate", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
@@ -131,7 +132,7 @@ namespace fixedphilip::discord
 					.set_max_value(std::numeric_limits<double>::max_digits10))
 				.add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
-			bot::command convert("convert", "Convert between units or currencies", bot.me.id, run_convert);
+			command convert("convert", "Convert between units or currencies", bot.me.id, run_convert);
 			convert.add_option(dpp::command_option(dpp::co_string, "value", "Values (math expressions and units/currencies) to convert from", true))
 				.add_option(dpp::command_option(dpp::co_string, "to", "Unit(s) or currency to convert the value to", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
@@ -142,7 +143,7 @@ namespace fixedphilip::discord
 			return { calculate, convert };
 		}
 	public:
-		math_module() : bot::module("math", "Provides commands for calculation and unit/currency conversion") {}
+		math_module() : module("math") {}
 	};
     static math_module instance;
 }
