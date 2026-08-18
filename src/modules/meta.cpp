@@ -66,9 +66,13 @@ namespace discofloor
             std::string storage_usage = "N/A";
             try
             {
-                storage_usage = std::format("{} / {}",
-                    bulbtils::file::size_to_string(cluster->data_size_total()),
-                    bulbtils::file::size_to_string(cluster->settings().max_data_size_total));
+                auto size = cluster->data_size_total();
+                auto max = cluster->settings().max_data_size_total;
+
+                storage_usage = std::format("{} / {} ({:.2f} %)",
+                    bulbtils::file::size_to_string(size),
+                    bulbtils::file::size_to_string(max),
+                    ((double)size / (double)max) * 100.0);
             }
             catch (std::exception& e)
             {
@@ -199,9 +203,13 @@ namespace discofloor
                     {
                         try
                         {
-                            event.reply(std::format(":floppy_disk: **| Total storage usage:** {} / {}",
-                                bulbtils::file::size_to_string(cluster->data_size_total()),
-                                bulbtils::file::size_to_string(cluster->settings().max_data_size_total)));
+                            auto size = cluster->data_size_total();
+                            auto max = cluster->settings().max_data_size_total;
+
+                            event.reply(std::format(":floppy_disk: **| Total storage usage:** {} / {} ({:.2f} %)",
+                                bulbtils::file::size_to_string(size),
+                                bulbtils::file::size_to_string(max),
+                                ((double)size / (double)max) * 100.0));
                         }
                         catch (std::exception& e)
                         {
@@ -248,10 +256,14 @@ namespace discofloor
                     {
                         try
                         {
-                            event.reply(std::format(":floppy_disk: **| Storage usage for {}:** {} / {}",
+                            auto size = cluster->data_size_id(id);
+                            auto max = cluster->settings().max_data_size_id;
+
+                            event.reply(std::format(":floppy_disk: **| Storage usage for {}:** {} / {} ({:.2f} %)",
                                 target,
-                                bulbtils::file::size_to_string(cluster->data_size_id(id)),
-                                bulbtils::file::size_to_string(cluster->settings().max_data_size_id)));
+                                bulbtils::file::size_to_string(size),
+                                bulbtils::file::size_to_string(max),
+                                ((double)size / (double)max) * 100.0));
                         }
                         catch (std::exception& e)
                         {
