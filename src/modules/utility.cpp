@@ -97,19 +97,22 @@ namespace discofloor
                 for (int i = 0; i < extracted_emojis.size(); i++)
                 {
                     auto& emoji = extracted_emojis[i].emoji;
-                    if (extracted_emojis[i].unknown_if_animated)
+                    if (!extracted_emojis[i].unknown_if_animated)
                     {
-                        reply_message += std::format("\n{}. `<{}:{}:{}>` - <{}>", i + 1, emoji.is_animated() ? "a" : "", emoji.name, std::to_string(emoji.id), emoji.get_url(4096));
+                        reply_message += std::format("\n{}. \"<{}\\:{}\\:{}>\" - <{}>", i + 1, emoji.is_animated() ? "a" : "", emoji.name, std::to_string(emoji.id), emoji.get_url(4096));
                     }
                     else
                     {
+                        auto emoji_animated = emoji;
+                        emoji_animated.flags |= dpp::e_animated;
+
                         reply_message += std::format(
                             "\n{}. Reaction emoji (unknown if animated or not)"
-                            "\n  - `<:{}:{}>` - <{}>"
-                            "\n  - `<a:{}:{}>` - <{}>",
+                            "\n  - \"<\\:{}\\:{}>\" - <{}>"
+                            "\n  - \"<a\\:{}\\:{}>\" - <{}>",
                             i + 1,
                             emoji.name, std::to_string(emoji.id), emoji.get_url(4096, dpp::i_png, false),
-                            emoji.name, std::to_string(emoji.id), emoji.get_url(4096, dpp::i_gif, false));
+                            emoji_animated.name, std::to_string(emoji_animated.id), emoji_animated.get_url(4096, dpp::i_gif, true));
                     }
                         
                 }
