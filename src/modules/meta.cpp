@@ -114,191 +114,181 @@ namespace discofloor
         static dpp::task<void> run_storage(const run_event& event)
         {
             auto cluster = event.get_bot();
-            if (auto message_create = event.get_message_command())
+
+            // bot data for id, or all
+            dpp::snowflake id = 0;
+            bool all = false;
+
+            // optional user/guild for prettier reply
+            dpp::user* user = nullptr;
+            dpp::guild* guild = nullptr;
+
+            auto invoker = event.get_command_invoker();
+
+            // are we allowed to do dangerous things with this data+
+            bool permission = false;
+            if (invoker == cluster->app_owner())
             {
-                event.reply_not_impl_use_other();
-                co_return;
+                // the instance owner can do everything
+                permission = true;
             }
 
-            if (auto slash_command = event.get_slash_command())
+            auto subcmd_group = event.command_interaction().options[0];
+            auto subcmd = subcmd_group.options[0];
+            if (subcmd.name == "id")
             {
-                // bot data for id, or all
-                dpp::snowflake id = 0;
-                bool all = false;
-
-                // optional user/guild for prettier reply
-                dpp::user* user = nullptr;
-                dpp::guild* guild = nullptr;
-
-                // are we allowed to do dangerous things with this data
-                bool permission = false;
-                if (slash_command->command.usr == cluster->app_owner())
+                auto id_str = event.get_cmd_required_param_value<std::string>("snowflake");
+                id = dpp::snowflake(id_str);
+                if (!id)
                 {
-                    // the instance owner can do everything
+                    event.reply(std::format(":x: **| \"{}\" is not a valid ID.**", dpp::utility::markdown_escape(id_str, true)));
+                    co_return;
+                }
+
+                if (user = dpp::find_user(id))
+                {
+                    goto is_user;
+                }
+                if (guild = dpp::find_guild(id))
+                {
+                    goto is_guild;
+                }
+            }
+            else if (subcmd.name == "user")
+            {
+                id = event.get_cmd_required_param_value<dpp::snowflake>("who");
+                user = dpp::find_user(id);
+
+            is_user:
+                if (invoker.id == id)
+                {
+                    // users can run this command on themselves
                     permission = true;
                 }
-
-                auto subcmd_group = slash_command->command.get_command_interaction().options[0];
-                auto subcmd = subcmd_group.options[0];
-                if (subcmd.name == "id")
+            }
+            else if (subcmd.name == "guild")
+            {
+                guild = event.get_guild();
+                if (!guild)
                 {
-                    auto id_str = std::get<std::string>(slash_command->get_parameter("snowflake"));
-                    id = dpp::snowflake(id_str);
-                    if (!id)
-                    {
-                        event.reply(std::format(":x: **| `{}` is not a valid ID.**", id_str));
-                        co_return;
-                    }
-
-                    if (user = dpp::find_user(id))
-                    {
-                        goto is_user;
-                    }
-                    if (guild = dpp::find_guild(id))
-                    {
-                        goto is_guild;
-                    }
+                    event.reply(":x: **| This command is not being run in the context of a guild.** "
+                        "To perform this command on a guild, execute it from there or provide its ID.");
+                    co_return;
                 }
-                else if (subcmd.name == "user")
+
+            is_guild:
+                if (guild->base_permissions(&invoker).can(dpp::p_manage_guild))
                 {
-                    id = std::get<dpp::snowflake>(slash_command->get_parameter("who"));
-                    user = dpp::find_user(id);
-
-                is_user:
-                    if (slash_command->command.usr.id == id)
-                    {
-                        // users can run this command on themselves
-                        permission = true;
-                    }
+                    // those that can invite bots can run this command
+                    permission = true;
                 }
-                else if (subcmd.name == "guild")
+            }
+            else if (subcmd.name == "all")
+            {
+                all = true;
+            }
+
+            if (all)
+            {
+                if (subcmd_group.name == "usage")
                 {
                     try
                     {
-                        id = slash_command->command.get_guild().id;
+                        auto size = cluster->data_size_total();
+                        auto max = cluster->settings().max_data_size_total;
+
+                        event.reply(std::format(":floppy_disk: **| Total storage usage:** {} / {} ({:.2f} %)",
+                            bulbtils::file::size_to_string(size),
+                            bulbtils::file::size_to_string(max),
+                            ((double)size / (double)max) * 100.0));
                     }
                     catch (std::exception& e)
                     {
-                        event.reply(":x: **| This command is not being run in the context of a guild.** "
-                            "To perform this command on a guild, execute it from there or provide its ID.");
+                        event.reply(":x: **| Failed to get total storage usage.**");
+                        cluster->log(dpp::ll_error, std::format("storage command: Failed to get total storage usage - {}", e.what()));
+                    }
+                }
+                else if (subcmd_group.name == "erase")
+                {
+                    if (!permission)
+                    {
+                        event.reply(":no_entry: **| Only the instance owner can erase all bot data.**");
                         co_return;
                     }
-                    guild = dpp::find_guild(id);
 
-                is_guild:
-                    if (slash_command->command.get_resolved_permission(slash_command->command.usr.id).can(dpp::p_manage_guild))
+                    try
                     {
-                        // those that can invite bots can run this command
-                        permission = true;
+                        auto files = std::filesystem::remove_all(std::filesystem::path(cluster->settings().data_folder));
+                        event.reply(std::format(":white_check_mark: **| Successfully erased {} files of all bot data.**", files));
+                    }
+                    catch (std::exception& e)
+                    {
+                        event.reply(std::format(":x: **| Failed to erase all bot data:** {}", e.what()));
                     }
                 }
-                else if (subcmd.name == "all")
+            }
+            else // individual (!all)
+            {
+                std::string target = "";
+                if (user)
                 {
-                    all = true;
+                    target = std::format("\"{}\" (user)", user->username);
+                }
+                else if (guild)
+                {
+                    target = std::format("\"{}\" (guild)", dpp::utility::markdown_escape(guild->name, true));
+                }
+                else
+                {
+                    target = std::format("\"{}\"", std::to_string(id));
                 }
 
-                if (all)
+                if (subcmd_group.name == "usage")
                 {
-                    if (subcmd_group.name == "usage")
+                    try
                     {
-                        try
-                        {
-                            auto size = cluster->data_size_total();
-                            auto max = cluster->settings().max_data_size_total;
+                        auto size = cluster->data_size_id(id);
+                        auto max = cluster->settings().max_data_size_id;
 
-                            event.reply(std::format(":floppy_disk: **| Total storage usage:** {} / {} ({:.2f} %)",
-                                bulbtils::file::size_to_string(size),
-                                bulbtils::file::size_to_string(max),
-                                ((double)size / (double)max) * 100.0));
-                        }
-                        catch (std::exception& e)
-                        {
-                            event.reply(":x: **| Failed to get total storage usage.**");
-                            cluster->log(dpp::ll_error, std::format("storage command: Failed to get total storage usage - {}", e.what()));
-                        }
+                        event.reply(std::format(":floppy_disk: **| Storage usage for {}:** {} / {} ({:.2f} %)",
+                            target,
+                            bulbtils::file::size_to_string(size),
+                            bulbtils::file::size_to_string(max),
+                            ((double)size / (double)max) * 100.0));
                     }
-                    else if (subcmd_group.name == "erase")
+                    catch (std::exception& e)
                     {
-                        if (!permission)
-                        {
-                            event.reply(":no_entry: **| Only the instance owner can erase all bot data.**");
-                            co_return;
-                        }
-
-                        try
-                        {
-                            auto files = std::filesystem::remove_all(std::filesystem::path(cluster->settings().data_folder));
-                            event.reply(std::format(":white_check_mark: **| Successfully erased {} files of all bot data.**", files));
-                        }
-                        catch (std::exception& e)
-                        {
-                            event.reply(std::format(":x: **| Failed to erase all bot data:** {}", e.what()));
-                        }
+                        event.reply(std::format(":x: **| Failed to get storage usage for {}.**", target));
+                        cluster->log(dpp::ll_error, std::format("storage command: Failed to get storage usage for {} - {}", target, e.what()));
                     }
                 }
-                else // individual (!all)
+                else if (subcmd_group.name == "erase")
                 {
-                    std::string target = "";
-                    if (user)
+                    if (!permission)
                     {
-                        target = std::format("`{}` (user)", user->username);
-                    }
-                    else if (guild)
-                    {
-                        target = std::format("`{}` (guild)", guild->name);
-                    }
-                    else
-                    {
-                        target = std::format("`{}`", std::to_string(id));
+                        if (user)
+                        {
+                            event.reply(std::format(":no_entry: **| Only {}, or the instance owner, can erase their bot data.**", target));
+                        }
+                        else if (guild)
+                        {
+                            event.reply(std::format(":no_entry: **| Only members with the \"Manage Guild\" permission, or the instance owner, can erase the bot data for {}.**", target));
+                        }
+                        else
+                        {
+                            event.reply(std::format(":no_entry: **| Only the instance owner can erase the bot data for {}.**", target));
+                        }
+                        co_return;
                     }
 
-                    if (subcmd_group.name == "usage")
+                    try
                     {
-                        try
-                        {
-                            auto size = cluster->data_size_id(id);
-                            auto max = cluster->settings().max_data_size_id;
-
-                            event.reply(std::format(":floppy_disk: **| Storage usage for {}:** {} / {} ({:.2f} %)",
-                                target,
-                                bulbtils::file::size_to_string(size),
-                                bulbtils::file::size_to_string(max),
-                                ((double)size / (double)max) * 100.0));
-                        }
-                        catch (std::exception& e)
-                        {
-                            event.reply(std::format(":x: **| Failed to get storage usage for {}.**", target));
-                            cluster->log(dpp::ll_error, std::format("storage command: Failed to get storage usage for {} - {}", target, e.what()));
-                        }
+                        auto files = std::filesystem::remove_all(cluster->data_folder_id(id));
+                        event.reply(std::format(":white_check_mark: **| Successfully erased {} files of bot data for {}.**", files, target));
                     }
-                    else if (subcmd_group.name == "erase")
+                    catch (std::exception& e)
                     {
-                        if (!permission)
-                        {
-                            if (user)
-                            {
-                                event.reply(std::format(":no_entry: **| Only {}, or the instance owner, can erase their bot data.**", target));
-                            }
-                            else if (guild)
-                            {
-                                event.reply(std::format(":no_entry: **| Only members with the \"Manage Guild\" permission, or the instance owner, can erase the bot data for {}.**", target));
-                            }
-                            else
-                            {
-                                event.reply(std::format(":no_entry: **| Only the instance owner can erase the bot data for {}.**", target));
-                            }
-                            co_return;
-                        }
-
-                        try
-                        {
-                            auto files = std::filesystem::remove_all(cluster->data_folder_id(id));
-                            event.reply(std::format(":white_check_mark: **| Successfully erased {} files of bot data for {}.**", files, target));
-                        }
-                        catch (std::exception& e)
-                        {
-                            event.reply(std::format(":x: **| Failed to erase bot data for {}:** {}", target, e.what()));
-                        }
+                        event.reply(std::format(":x: **| Failed to erase bot data for {}:** {}", target, e.what()));
                     }
                 }
             }

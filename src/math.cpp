@@ -1,6 +1,7 @@
 #include <fixedphilip/math.h>
-
 #include <fixedphilip/log.h>
+
+#include <bulbtils/string.h>
 
 #include <tinyexpr.h>
 
@@ -56,7 +57,8 @@ namespace fixedphilip::math
 		if (error)
 		{
 			// not a conversion error
-			throw std::runtime_error(std::format("Failed to parse expression for unit \"{}\":\n```\n{}\n{}\n```", name, expression, std::string(error, ' ') + "↑"));
+			throw std::runtime_error(std::format("Failed to parse expression for unit `{}`:\n```\n{}\n{}\n```",
+				name, dpp::utility::markdown_escape(expression, true), std::string(error, ' ') + "↑"));
 		}
 		return result;
 	}
@@ -73,13 +75,13 @@ namespace fixedphilip::math
 		}
 
 		auto input_lower = input;
-		fixedphilip::utils::string::inplace::to_lowercase(input_lower);
+		bulbtils::string::inplace::to_lowercase(input_lower);
 
 		auto dest_units_lower = destination_units;
-		fixedphilip::utils::string::inplace::to_lowercase(dest_units_lower);
+		bulbtils::string::inplace::to_lowercase(dest_units_lower);
 
-		auto input_splits = fixedphilip::utils::string::split_by_whitespace(input_lower);
-		auto dest_units_splits = fixedphilip::utils::string::split_by_whitespace(dest_units_lower);
+		auto input_splits = bulbtils::string::split_by_whitespace(input_lower);
+		auto dest_units_splits = bulbtils::string::split_by_whitespace(dest_units_lower);
 
 		struct unit_search_result
 		{
@@ -292,11 +294,13 @@ namespace fixedphilip::math
 
 		if (all_results.empty())
 		{
-			throw fixedphilip::math::conversion::error(std::format("Failed to find a suitable conversion for `{}` to `{}` - no units detected", input, destination_units));
+			throw fixedphilip::math::conversion::error(std::format("Failed to find a suitable conversion for \"{}\" to \"{}\" - no units detected", 
+				dpp::utility::markdown_escape(input, true), dpp::utility::markdown_escape(destination_units, true)));
 		}
 		else
 		{
-			std::string error_str = std::format("Failed to find a suitable conversion for `{}` to `{}` - {} unit{} detected:", input, destination_units, all_results.size(), all_results.size() == 1 ? "" : "s");
+			std::string error_str = std::format("Failed to find a suitable conversion for \"{}\" to \"{}\" - {} unit{} detected:", 
+				dpp::utility::markdown_escape(input, true), dpp::utility::markdown_escape(destination_units, true), all_results.size(), all_results.size() == 1 ? "" : "s");
 			for (auto& result : all_results)
 			{
 				error_str += std::format("\n• {} `{}` (\"{}\", {})", result.input ? "From" : "To", result.input ? input_splits[result.index] : dest_units_splits[result.index], result.unit->display_name, result.family);
@@ -348,7 +352,7 @@ namespace fixedphilip::math
 			try
 			{
 				name = currency_info.at("code");
-				fixedphilip::utils::string::inplace::to_lowercase(name);
+				bulbtils::string::inplace::to_lowercase(name);
 			}
 			catch (const std::exception& e)
 			{

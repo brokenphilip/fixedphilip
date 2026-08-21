@@ -12,10 +12,10 @@ namespace discofloor
             auto avatar = user.get_avatar_url(4096);
             if (avatar.empty())
             {
-                event.reply(dpp::message(std::format(":x: **| Failed to get `{}`'s avatar.**", user.username)).set_flags(dpp::m_ephemeral));
+                event.reply(dpp::message(std::format(":x: **| Failed to get avatar for \"{}\".**", discofloor::get_username(user))).set_flags(dpp::m_ephemeral));
                 co_return;
             }
-            event.reply(dpp::message(std::format(":frame_photo: **| `{}`'s avatar is:** {}", user.username, avatar)).set_flags(dpp::m_ephemeral));
+            event.reply(dpp::message(std::format(":frame_photo: **| Avatar for \"{}\":** {}", discofloor::get_username(user), avatar)).set_flags(dpp::m_ephemeral));
         }
 
         static dpp::task<void> run_get_banner(const run_event& event)
@@ -23,7 +23,7 @@ namespace discofloor
             auto result = co_await event.get_bot()->co_user_get(event.get_user_context_menu()->get_user().id);
             if (result.is_error())
             {
-                event.reply(dpp::message(std::format(":x: **| Failed to get `{}`'s additional user info.**", event.get_user_context_menu()->get_user().username)).set_flags(dpp::m_ephemeral));
+                event.reply(dpp::message(std::format(":x: **| Failed to get additional user info for \"{}\".**", discofloor::get_username(event.get_user_context_menu()->get_user()))).set_flags(dpp::m_ephemeral));
                 co_return;
             }
             auto user_identified = result.get<dpp::user_identified>();
@@ -37,21 +37,30 @@ namespace discofloor
                 }
                 else
                 {
-                    event.reply(dpp::message(std::format(":x: **| Failed to get `{}`'s banner.**", user_identified.username)).set_flags(dpp::m_ephemeral));
+                    event.reply(dpp::message(std::format(":x: **| Failed to get banner for \"{}\".**", discofloor::get_username(user_identified))).set_flags(dpp::m_ephemeral));
                     co_return;
                 }
             }
-            event.reply(dpp::message(std::format(":frame_photo: **| `{}`'s banner is:** {}", user_identified.username, banner)).set_flags(dpp::m_ephemeral));
+            event.reply(dpp::message(std::format(":frame_photo: **| Banner for \"{}\":** {}", discofloor::get_username(user_identified), banner)).set_flags(dpp::m_ephemeral));
         }
 
         static dpp::task<void> run_extract_emojis(const run_event& event)
         {
-            auto extract_emojis = [](const std::string& message) -> std::vector<std::string>
+            struct extracted_emoji
             {
-                static std::regex emoji_regex("<(a)?:([^:]+):([0-9]+)>");
+                dpp::emoji emoji;
+                bool unknown_if_animated;
 
-                std::vector<std::string> emojis;
-                for (auto it = std::sregex_iterator(message.begin(), message.end(), emoji_regex); it != std::sregex_iterator(); it++)
+                extracted_emoji(const dpp::emoji& emoji, bool unknown_if_animated)
+                    : emoji(emoji), unknown_if_animated(unknown_if_animated) {}
+            };
+            static std::regex emoji_regex("<(a)?:([^:]+):([0-9]+)>");
+
+            // Extract emojis from a string (chat message, user status, user about me...)
+            auto extract_emojis = [](const std::string& str) -> std::vector<extracted_emoji>
+            {
+                std::vector<extracted_emoji> emojis;
+                for (auto it = std::sregex_iterator(str.begin(), str.end(), emoji_regex); it != std::sregex_iterator(); it++)
                 {
                     auto& smatch = *it;
 
@@ -59,42 +68,58 @@ namespace discofloor
                     auto name = smatch[2].str();
                     auto id = smatch[3].str();
 
-                    dpp::emoji emoji(name, id, animated ? dpp::e_animated : 0);
-                    
-                    std::string emoji_extracted = std::format("`<{}:{}:{}>` - <{}>", animated ? "a" : "", name, id, emoji.get_url(4096));
-                    if (std::find(emojis.begin(), emojis.end(), emoji_extracted) == emojis.end())
-                    {
-                        emojis.push_back(emoji_extracted);
-                    }
+                    emojis.emplace_back(dpp::emoji(name, id, animated ? dpp::e_animated : 0), false);
                 }
                 return emojis;
             };
 
-            std::regex emoji_regex("<(a)?:([^:]+):([0-9]+)>");
-
             if (auto message_ctx_menu = event.get_message_context_menu())
             {
-                auto results = extract_emojis(message_ctx_menu->get_message().content);
+                auto message = message_ctx_menu->get_message();
 
-                if (results.empty())
+                auto extracted_emojis = extract_emojis(message.content);
+                for (auto& reaction : message.reactions)
+                {
+                    auto id = reaction.emoji_id;
+                    if (id != 0)
+                    {
+                        extracted_emojis.emplace_back(dpp::emoji(reaction.emoji_name, id), true);
+                    }
+                }
+
+                if (extracted_emojis.empty())
                 {
                     event.reply(dpp::message(":frame_photo: **| No emojis found in this message.**").set_flags(dpp::m_ephemeral));
+                    co_return;
                 }
-                else
+
+                std::string reply_message = std::format(":frame_photo: **| Extracted {} emoji{} from this message:**", extracted_emojis.size(), extracted_emojis.size() == 1 ? "" : "s");
+                for (int i = 0; i < extracted_emojis.size(); i++)
                 {
-                    std::string reply_message = std::format(":frame_photo: **| Extracted {} emoji{} from this message:**", results.size(), results.size() == 1 ? "" : "s");
-                    for (int i = 0; i < results.size(); i++)
+                    auto& emoji = extracted_emojis[i].emoji;
+                    if (extracted_emojis[i].unknown_if_animated)
                     {
-                        reply_message += std::format("\n{}. {}", i + 1, results[i]);
+                        reply_message += std::format("\n{}. `<{}:{}:{}>` - <{}>", i + 1, emoji.is_animated() ? "a" : "", emoji.name, std::to_string(emoji.id), emoji.get_url(4096));
                     }
-                    event.reply(dpp::message(reply_message).set_flags(dpp::m_ephemeral));
+                    else
+                    {
+                        reply_message += std::format(
+                            "\n{}. Reaction emoji (unknown if animated or not)"
+                            "\n  - `<:{}:{}>` - <{}>"
+                            "\n  - `<a:{}:{}>` - <{}>",
+                            i + 1,
+                            emoji.name, std::to_string(emoji.id), emoji.get_url(4096, dpp::i_png, false),
+                            emoji.name, std::to_string(emoji.id), emoji.get_url(4096, dpp::i_gif, false));
+                    }
+                        
                 }
+                event.reply(dpp::message(reply_message).set_flags(dpp::m_ephemeral));
             }
+            // uncomment when we're able to get emojis from status and aboutme
             //else if (auto user_ctx_menu = event.get_user_context_menu())
             //{
             //    auto user = user_ctx_menu->get_user();
             //}
-            co_return;
         }
 
         virtual std::vector<command> commands(bot& bot) override final
@@ -104,6 +129,7 @@ namespace discofloor
 
             command extract_emojis_message("extract emojis", dpp::ctxm_message, bot.me.id, run_extract_emojis);
             //command extract_emojis_user("extract emojis", dpp::ctxm_user, bot.me.id, run_extract_emojis);
+            // uncomment when we're able to get emojis from status and aboutme
 
             return { get_avatar, get_banner, extract_emojis_message };
         }

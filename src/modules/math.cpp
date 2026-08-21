@@ -8,17 +8,11 @@ namespace discofloor
 	{
 		static dpp::task<void> run_calculate(const run_event& event)
 		{
-            if (auto message_create = event.get_message_command())
-            {
-                event.reply_not_impl_use_other();
-                co_return;
-            }
-
             auto thinking = event.co_thinking_start();
 
-            auto expression = std::get<std::string>(event.get_slash_command()->get_parameter("expression"));
-            auto decimals = event.try_get_command_parameter<int64_t>("decimals", 2);
-            auto separate = event.try_get_command_parameter<bool>("separate", true);
+            auto expression = event.get_cmd_required_param_value<std::string>("expression");
+            auto decimals = event.get_cmd_optional_param_value<int64_t>("decimals", 2);
+            auto separate = event.get_cmd_optional_param_value<bool>("separate", true);
 
             int error = 0;
             auto result = te_interp(expression.c_str(), &error);
@@ -38,29 +32,24 @@ namespace discofloor
 
 		static dpp::task<void> run_convert(const run_event& event)
 		{
-            if (auto message_create = event.get_message_command())
-            {
-                event.reply_not_impl_use_other();
-                co_return;
-            }
-
             auto cluster = event.get_bot();
             auto thinking = event.co_thinking_start();
 
             static auto next_call = std::chrono::minutes(1);
             if (bulbtils::time::run_if_passed<struct fetch_currency_json>(next_call))
             {
-                auto request = co_await cluster->co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
-                if (request.error != dpp::h_success)
+                // todo fixme
+                auto result = co_await cluster->co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
+                if (result.status != 200)
                 {
-                    cluster->log(dpp::ll_error, "Floatrates GET HTTP status " + std::to_string(request.status));
+                    cluster->log(dpp::ll_error, "Floatrates GET HTTP status " + std::to_string(result.status));
                     goto exit_update_currencies;
                 }
 
                 nlohmann::json data = {};
                 try
                 {
-                    data = nlohmann::json::parse(request.body);
+                    data = nlohmann::json::parse(result.body);
                 }
                 catch (const std::exception& e)
                 {
@@ -88,10 +77,10 @@ namespace discofloor
         exit_update_currencies:
             std::string response;
 
-            auto value = std::get<std::string>(event.get_slash_command()->get_parameter("value"));
-            auto to = std::get<std::string>(event.get_slash_command()->get_parameter("to"));
-            auto decimals = event.try_get_command_parameter<int64_t>("decimals", 2);
-            auto separate = event.try_get_command_parameter<bool>("separate", true);
+            auto value = event.get_cmd_required_param_value<std::string>("value");
+            auto to = event.get_cmd_required_param_value<std::string>("to");
+            auto decimals = event.get_cmd_optional_param_value<int64_t>("decimals", 2);
+            auto separate = event.get_cmd_optional_param_value<bool>("separate", true);
             try
             {
                 std::string result, family;
