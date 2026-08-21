@@ -84,14 +84,15 @@ namespace discofloor
                 .set_author(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM), "https://github.com/brokenphilip/fixedphilip", "https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
                 .set_description(
                     std::format(
-                        "*Powered by discofloor " DISCOFLOOR_VERSION_STRING "*\n\n"
+                        "*Powered by discofloor " DISCOFLOOR_VERSION_STRING "*\n"
+                        "*Using " DPP_VERSION_TEXT "*\n\n"
                         "**Built on:** {}\n"
                         "**Targets:** " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", 
                     fixedphilip::build::date_time(), 
                     FIXEDPHILIP_BUILD_ARCHITECTURE_NUM))
                 .add_field("Instance owner", cluster->app_owner().username)
                 .add_field("Uptime (Ping)", std::format("{} (`{} ms`)", uptime, static_cast<int>(cluster->rest_ping * 1000)))
-                .add_field("User count",
+                .add_field("User/server count",
                     std::format(
                         "\\- {} user{} in {} server{}\n"
                         "\\- {} user install{}\n"

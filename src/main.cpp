@@ -2,6 +2,7 @@
 #include <fixedphilip/build.h>
 
 #include <discofloor/bot.h>
+#include <discofloor/version.h>
 
 bool handle_arg_num(int& num, const std::string& name, char* argv[], int index)
 {
@@ -55,6 +56,8 @@ int main(int argc, char* argv[])
 {
     fixedphilip::log::info("==============================");
     fixedphilip::log::info(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM));
+    fixedphilip::log::info("Powered by discofloor " DISCOFLOOR_VERSION_STRING);
+    fixedphilip::log::info("Using " DPP_VERSION_TEXT);
     fixedphilip::log::info(std::format("Built on {}", fixedphilip::build::date_time()));
     fixedphilip::log::info(std::format("Targets " FIXEDPHILIP_BUILD_PLATFORM ", " FIXEDPHILIP_BUILD_CONFIGURATION ", {}-bit", FIXEDPHILIP_BUILD_ARCHITECTURE_NUM));
     fixedphilip::log::info("==============================");
@@ -149,6 +152,12 @@ int main(int argc, char* argv[])
         };
 
         discofloor::bot bot(bot_config, logger, intents, total_shards, cluster_id, max_clusters);
+
+        bot.for_each_command([](discofloor::command& cmd)
+        {
+            cmd.set_interaction_contexts({ dpp::itc_bot_dm, dpp::itc_guild, dpp::itc_private_channel });
+        });
+
         bot.start();
     }
 

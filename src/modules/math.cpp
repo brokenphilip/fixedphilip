@@ -38,7 +38,6 @@ namespace discofloor
             static auto next_call = std::chrono::minutes(1);
             if (bulbtils::time::run_if_passed<struct fetch_currency_json>(next_call))
             {
-                // todo fixme
                 auto result = co_await cluster->co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
                 if (result.status != 200)
                 {
