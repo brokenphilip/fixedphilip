@@ -10,7 +10,7 @@ namespace discofloor
         static dpp::task<void> run_shutdown(const run_event& event)
         {
             auto cluster = event.get_bot();
-            if (event.get_command_invoker() == cluster->app_owner())
+            if (event.command_invoker() == cluster->app_owner())
             {
                 cluster->log(dpp::ll_info, "Shutdown initiated via command");
                 co_await event.co_reply(":wave: **| Shutting down...**");
@@ -124,7 +124,7 @@ namespace discofloor
             dpp::user* user = nullptr;
             dpp::guild* guild = nullptr;
 
-            auto invoker = event.get_command_invoker();
+            auto invoker = event.command_invoker();
 
             // are we allowed to do dangerous things with this data+
             bool permission = false;

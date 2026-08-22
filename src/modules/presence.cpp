@@ -109,112 +109,73 @@ namespace discofloor
 			}
 		};
 
+		bot* owner = nullptr;
+
 		presence_module::config config;
-		//std::shared_mutex config_mutex;
 
 		dpp::timer timer_handle = SIZE_MAX;
 		dpp::event_handle ready_handle = SIZE_MAX;
 
-		void update_presence(bot& bot)
+		void update_presence()
 		{
 			const std::vector<std::pair<std::string, std::string>> token_conversion
 			{
-				{ "%prefix%", bot.settings().prefix },
+				{ "%prefix%", owner->old_style_commands_enabled() ? "/" : owner->settings().prefix},
 				{ "%version%", std::to_string(FIXEDPHILIP_BUILD_VERSION_NUM) },
 			};
 
 			std::string activity = config.activity;
 			dpp::presence_status status = config.status;
 			dpp::activity_type type = config.activity_type;
-			//{
-			//	std::shared_lock _(config_mutex);
-			//	activity = config.activity;
-			//	status = config.status;
-			//	type = config.activity_type;
-			//}
 
 			for (int i = 0; i < token_conversion.size(); i++)
 			{
 				bulbtils::string::replace_all(activity, token_conversion[i].first, token_conversion[i].second);
 			}
-			bot.set_presence(dpp::presence(status, type, activity));
+			owner->set_presence(dpp::presence(status, type, activity));
 		}
 
-		static dpp::task<void> ready_event(const dpp::ready_t& event)
+		void ready_event(const dpp::ready_t& event)
 		{
 			if (dpp::run_once<struct presence_ready_event_init>())
 			{
-				auto cluster = static_cast<bot*>(event.owner);
-
-				presence_module* presence = nullptr;
-				for (auto& module : cluster->loaded_modules())
-				{
-					if (std::string("presence") == module->name())
-					{
-						presence = static_cast<presence_module*>(module);
-						break;
-					}
-				}
-				if (!presence)
-				{
-					cluster->log(dpp::ll_error, "presence_ready_event_init: presence module was null");
-					co_return;
-				}
-				
-				presence->update_presence(*cluster);
-
-				int update_rate_mins = presence->config.update_rate_mins;
-				//{
-				//	std::shared_lock _(config_mutex);
-				//	update_rate_mins = config.update_rate_mins;
-				//}
+				int update_rate_mins = config.update_rate_mins;
 				if (update_rate_mins > 0)
 				{
-					presence->timer_handle = cluster->start_timer([presence, cluster](const dpp::timer& timer) -> dpp::task<void>
-					{
-						presence->update_presence(*cluster);
-						co_return;
-					},
-					60 * update_rate_mins);
+					timer_handle = owner->start_timer([this](const dpp::timer& timer) { update_presence(); }, 60 * update_rate_mins);
 				}
+				update_presence();
 			}
 		}
 
 		virtual bool init(bot& bot) override final
 		{
+			owner = &bot;
+
+			bulbtils::file::settings config_settings
 			{
-				//std::unique_lock _(config_mutex);
+				.filename = "presence.json",
+				.create_if_not_found = true,
+			};
+			bot.append_loggers(config_settings);
 
-				bulbtils::file::settings config_settings
-				{
-					.filename = "presence.json",
-					.create_if_not_found = true,
-				};
-				bot.append_loggers(config_settings);
-
-				auto result = config.load(config_settings);
-				if (result != bulbtils::file::r_success && result != bulbtils::file::r_file_not_found)
-				{
-					return false;
-				}
+			auto result = config.load(config_settings);
+			if (result != bulbtils::file::r_success && result != bulbtils::file::r_file_not_found)
+			{
+				return false;
 			}
-			ready_handle = bot.on_ready.attach(ready_event);
+
+			ready_handle = bot.on_ready.attach([this](const dpp::ready_t& e) { ready_event(e); });
 			return true;
 		}
 
 		virtual void destroy(bot& bot) override final
 		{
-			bot.on_ready.detach(ready_handle);
-
-			int update_rate_mins = config.update_rate_mins;
-			//{
-			//	std::shared_lock _(config_mutex);
-			//	update_rate_mins = config.update_rate_mins;
-			//}
-			if (update_rate_mins > 0)
+			if (timer_handle != SIZE_MAX)
 			{
 				bot.stop_timer(timer_handle);
 			}
+			bot.on_ready.detach(ready_handle);
 		}
 	public:
 		presence_module() : module("presence") {}

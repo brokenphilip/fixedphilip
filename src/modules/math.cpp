@@ -112,7 +112,13 @@ namespace discofloor
 
 		virtual std::vector<command> commands(bot& bot) override final
 		{
-			command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate);
+			command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate,
+            {
+                "\"1 + 2 + 3\"",
+                "1/11 10",
+                "\"sin(pi / 2) * sqrt(25 ^ 2)\"",
+                "\"12345 / 11\" 5 no",
+            });
 
 			calculate.add_option(dpp::command_option(dpp::co_string, "expression", "Math expression to calculate", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
@@ -120,7 +126,13 @@ namespace discofloor
 					.set_max_value(std::numeric_limits<double>::max_digits10))
 				.add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
-			command convert("convert", "Convert between units or currencies", bot.me.id, run_convert);
+			command convert("convert", "Convert between units or currencies", bot.me.id, run_convert,
+            {
+                "\"123 meters\" cm",
+                "\"123 * 456 seconds\" \"hours min s\"",
+                "\"12345 usd\" rsd 5 no",
+            });
+
 			convert.add_option(dpp::command_option(dpp::co_string, "value", "Values (math expressions and units/currencies) to convert from", true))
 				.add_option(dpp::command_option(dpp::co_string, "to", "Unit(s) or currency to convert the value to", true))
 				.add_option(dpp::command_option(dpp::co_integer, "decimals", "Number of decimals to round the result to (2 by default, use -1 for automatic)")
