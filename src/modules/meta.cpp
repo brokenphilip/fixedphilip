@@ -10,19 +10,16 @@ namespace discofloor
         static dpp::task<void> run_shutdown(const run_event& event)
         {
             auto cluster = event.get_bot();
-            if (event.command_invoker() == cluster->app_owner())
-            {
-                cluster->log(dpp::ll_info, "Shutdown initiated via command");
-                co_await event.co_reply(":wave: **| Shutting down...**");
-
-                // apparently you can't clear presences lol
-                //bot.cluster().set_presence(dpp::presence(dpp::ps_offline, dpp::at_custom, ""));
-                cluster->shutdown();
-            }
-            else
+            if (event.command_invoker() != cluster->app_owner())
             {
                 event.reply(":no_entry: **| Only the instance owner can run this command.**");
+                co_return;
             }
+
+
+            cluster->log(dpp::ll_info, "Shutdown initiated via command");
+            co_await event.co_reply(":wave: **| Shutting down...**");
+            cluster->full_shutdown();
         }
 
         static dpp::task<void> run_status(const run_event& event)
@@ -295,6 +292,12 @@ namespace discofloor
             }
         }
 
+        static dpp::task<void> run_invite(const run_event& event)
+        {
+            event.reply(":link: **| Invite link:** " + dpp::utility::bot_invite_url(event.get_bot()->me.id));
+            co_return;
+        }
+
         virtual std::vector<command> commands(bot& bot) override final
         {
             command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
@@ -330,7 +333,9 @@ namespace discofloor
                 storage.add_option(subcmd_group);
             }
 
-            return { shutdown, status, storage };
+            command invite("invite", "Displays bot invite link", bot.me.id, run_invite);
+
+            return { shutdown, status, storage, invite };
         }
     public:
         meta_module() : module("meta") {}

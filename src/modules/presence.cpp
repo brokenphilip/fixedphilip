@@ -120,7 +120,7 @@ namespace discofloor
 		{
 			const std::vector<std::pair<std::string, std::string>> token_conversion
 			{
-				{ "%prefix%", owner->old_style_commands_enabled() ? "/" : owner->settings().prefix},
+				{ "%prefix%", owner->old_style_commands_enabled() ? owner->settings().prefix : "/" },
 				{ "%version%", std::to_string(FIXEDPHILIP_BUILD_VERSION_NUM) },
 			};
 
