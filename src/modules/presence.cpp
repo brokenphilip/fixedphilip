@@ -130,7 +130,7 @@ namespace discofloor
 
 			for (int i = 0; i < token_conversion.size(); i++)
 			{
-				bulbtils::string::replace_all(activity, token_conversion[i].first, token_conversion[i].second);
+				bulbtils::string::inplace::replace_all(activity, token_conversion[i].first, token_conversion[i].second);
 			}
 			owner->set_presence(dpp::presence(status, type, activity));
 		}
