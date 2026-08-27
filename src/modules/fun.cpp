@@ -144,9 +144,6 @@ namespace discofloor
             // contains the original message (for editing) and the player (command.usr)
             dpp::form_submit_t form_event;
 
-            // reply messages don't contain this for user installs
-            dpp::snowflake guild_id;
-
             rps_game(uint32_t id, const rps_choice& choice, const dpp::form_submit_t& form_event)
                 : id(id), choice(choice), form_event(form_event) {}
 
@@ -278,7 +275,7 @@ namespace discofloor
 
             if (rps == rps_games.end())
             {
-                event.reply(discofloor::container_msg(std::format("This game has expired, please create another: " + rps_mention), 0xFF0000));
+                event.reply(discofloor::container_msg("This game has expired, please create another: " + rps_mention, 0xFF0000));
                 co_return;
             }
 
