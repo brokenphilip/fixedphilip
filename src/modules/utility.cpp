@@ -1,4 +1,5 @@
 #include <discofloor/bot.h>
+#include <discofloor/utility.h>
 
 #include <regex>
 
