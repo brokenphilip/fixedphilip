@@ -73,7 +73,7 @@ else()
 	find_package(Git)
 	message(WARNING "Could not find DPP install. Building from source instead.")
 	if (GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
-		execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init
+		execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init DPP
 				WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 				RESULT_VARIABLE RESULT)
 		if (NOT RESULT EQUAL 0)

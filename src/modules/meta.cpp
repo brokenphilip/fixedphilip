@@ -1,5 +1,6 @@
 #include <discofloor/bot.h>
 #include <discofloor/version.h>
+#include <discofloor/utility.h>
 
 #include <fixedphilip/build.h>
 
@@ -15,9 +16,7 @@ namespace discofloor
                 event.reply(":no_entry: **| Only the instance owner can run this command.**");
                 co_return;
             }
-
-
-            cluster->log(dpp::ll_info, "Shutdown initiated via command");
+            log_event(event, dpp::ll_info, "Shutdown initiated via command");
             co_await event.co_reply(":wave: **| Shutting down...**");
             cluster->full_shutdown();
         }
@@ -73,7 +72,7 @@ namespace discofloor
             }
             catch (std::exception& e)
             {
-                cluster->log(dpp::ll_error, std::format("status command: Failed to fetch storage usage - {}", e.what()));
+                log_event(event, dpp::ll_error, std::format("status command: Failed to fetch storage usage - {}", e.what()));
             }
 
             auto embed = dpp::embed()
@@ -98,7 +97,7 @@ namespace discofloor
                     user_install_count, counts.user_installs == 1 ? "" : "s",
                     total_user_count))
                 .add_field("Cluster ID", std::format("`{}` (out of {})", cluster->cluster_id, cluster->maxclusters))
-                .add_field("Shard ID", std::format("`{}` (out of {})", event.event_dispatch().shard, cluster->numshards))
+                .add_field("Shard ID", std::format("`{}` (out of {})", static_cast<dpp::event_dispatch_t>(event).shard, cluster->numshards))
                 .add_field("Storage usage", storage_usage)
                 .set_footer(dpp::embed_footer().set_text("Last restarted"))
                 .set_timestamp(cluster->start_time_unix());
@@ -203,7 +202,7 @@ namespace discofloor
                     catch (std::exception& e)
                     {
                         event.reply(":x: **| Failed to get total storage usage.**");
-                        cluster->log(dpp::ll_error, std::format("storage command: Failed to get total storage usage - {}", e.what()));
+                        log_event(event, dpp::ll_error, std::format("storage command: Failed to get total storage usage - {}", e.what()));
                     }
                 }
                 else if (subcmd_group.name == "erase")
@@ -257,7 +256,7 @@ namespace discofloor
                     catch (std::exception& e)
                     {
                         event.reply(std::format(":x: **| Failed to get storage usage for {}.**", target));
-                        cluster->log(dpp::ll_error, std::format("storage command: Failed to get storage usage for {} - {}", target, e.what()));
+                        log_event(event, dpp::ll_error, std::format("storage command: Failed to get storage usage for {} - {}", target, e.what()));
                     }
                 }
                 else if (subcmd_group.name == "erase")

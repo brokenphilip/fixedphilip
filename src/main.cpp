@@ -142,13 +142,12 @@ int main(int argc, char* argv[])
         auto logger = [](const dpp::log_t& event)
         {
             // line 195 of cluster.cpp doesn't seem correct... 		dpp::log_t logmsg(nullptr, 0, msg); - why pass nullptr/0 ?! ?! ?!
-            fixedphilip::log::implementation(
-                event.severity,
-                //std::format("Cl: {}, Sh: {}", 
-                //    event.owner ? std::to_string(event.owner->cluster_id) : "N/A", 
-                //    event.shard), 
-                "",
-                event.message);
+            std::string prefix = "";
+            if (event.owner)
+            {
+                prefix = std::format("Cl: {}, Sh: {}", event.owner->cluster_id, event.shard);
+            }
+            fixedphilip::log::implementation(event.severity, prefix, event.message);
         };
 
         discofloor::bot bot(bot_config, logger, intents, total_shards, cluster_id, max_clusters);

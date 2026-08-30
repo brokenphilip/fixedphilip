@@ -27,7 +27,7 @@ namespace discofloor
                 auto result = co_await message_command->co_reply(send);
                 if (result.is_error())
                 {
-                    cluster->log(dpp::ll_error, "send_wait_edit: co_reply failed - " + result.get_error().human_readable);
+                    log_event(event, dpp::ll_error, "send_wait_edit: co_reply failed - " + result.get_error().human_readable);
                     co_return;
                 }
 
@@ -43,7 +43,7 @@ namespace discofloor
                 auto result = co_await slash_command->co_reply(send);
                 if (result.is_error())
                 {
-                    cluster->log(dpp::ll_error, "send_wait_edit: co_reply failed - " + result.get_error().human_readable);
+                    log_event(event, dpp::ll_error, "send_wait_edit: co_reply failed - " + result.get_error().human_readable);
                     co_return;
                 }
 

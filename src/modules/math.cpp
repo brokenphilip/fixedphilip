@@ -1,4 +1,5 @@
 #include <discofloor/bot.h>
+#include <discofloor/utility.h>
 
 #include <fixedphilip/math.h>
 
@@ -41,7 +42,7 @@ namespace discofloor
                 auto result = co_await cluster->co_request("https://www.floatrates.com/daily/usd.json", dpp::m_get);
                 if (result.status != 200)
                 {
-                    cluster->log(dpp::ll_error, "Floatrates GET HTTP status " + std::to_string(result.status));
+                    log_event(event, dpp::ll_error, "Floatrates GET HTTP status " + std::to_string(result.status));
                     goto exit_update_currencies;
                 }
 
@@ -52,12 +53,12 @@ namespace discofloor
                 }
                 catch (const std::exception& e)
                 {
-                    cluster->log(dpp::ll_error, std::format("Exception parsing currency conversion json file: {}", e.what()));
+                    log_event(event, dpp::ll_error, std::format("Exception parsing currency conversion json file: {}", e.what()));
                     goto exit_update_currencies;
                 }
                 if (data.empty())
                 {
-                    cluster->log(dpp::ll_error, "Currency conversion json file is empty");
+                    log_event(event, dpp::ll_error, "Currency conversion json file is empty");
                     goto exit_update_currencies;
                 }
 
