@@ -128,20 +128,25 @@ namespace discofloor
     {
         std::vector<rps::game> games;
 
-        std::string rps_mention = "";
+        std::string rps_mention = "`/rps`";
+        void set_rps_mention_if_unset(bot* cluster)
+        {
+            if (rps_mention == "`/rps`")
+            {
+                rps_mention = cluster->get_command("rps", dpp::ctxm_chat_input).value().get_mention();
+            }
+        }
+
         dpp::task<void> run_rps(const run_event& event)
         {
             if (auto message_command = event.get_message_command())
             {
-                // can't prompt dialogs via old-style chat commands
-                message_command->reply(":x: **| You can only play RPS via slash commands.**");
-                co_return;
-            }
-            auto slash_command = event.get_slash_command();
+                // required for this chat command
+                set_rps_mention_if_unset(event.get_bot());
 
-            if (rps_mention.empty())
-            {
-                rps_mention = slash_command->command.get_command_interaction().get_mention();
+                // can't prompt dialogs via old-style chat commands
+                message_command->reply(":x: **| You can only create RPS games using " + rps_mention + "**");
+                co_return;
             }
 
             dpp::component select_rps;
@@ -154,8 +159,7 @@ namespace discofloor
                 auto& choice = rps::choices[i];
                 select_rps.add_select_option(dpp::select_option(choice.name, choice.name).set_emoji(choice.emoji));
             }
-
-            slash_command->dialog(dpp::interaction_modal_response(rps::game::new_modal(), "Rock, Paper, Scissors", { select_rps }));
+            event.get_slash_command()->dialog(dpp::interaction_modal_response(rps::game::new_modal(), "Rock, Paper, Scissors", { select_rps }));
         }
 
         dpp::event_handle form_submit_handle = SIZE_MAX;
@@ -182,6 +186,8 @@ namespace discofloor
 
             auto host_player = event.command.usr.get_mention();
 
+            // required for the expiry message for this rps game
+            set_rps_mention_if_unset(static_cast<bot*>(event.owner));
             auto& rps = games.emplace_back(rps::game::id_from_modal(event.custom_id), host_player, rps_mention, choice_value, event);
 
             dpp::component container;
@@ -193,8 +199,6 @@ namespace discofloor
                 "**{}** wants to play rock, paper, scissors!\n"
                 "-# They've already selected an option, choose your response:",
                 host_player));
-
-            container.add_component_v2(content);
 
             // buttons need to be added to an action row first
             // they can't be added directly to the container
@@ -215,7 +219,14 @@ namespace discofloor
 
                 actions.add_component_v2(button);
             }
+
+            dpp::component content_footer;
+            content_footer.set_type(dpp::cot_text_display);
+            content_footer.set_content("-# Game expires at " + dpp::utility::timestamp(std::time(nullptr) + timed_interaction::lifespan_seconds, dpp::utility::tf_short_time));
+
+            container.add_component_v2(content);
             container.add_component_v2(actions);
+            container.add_component_v2(content_footer);
 
             dpp::message msg;
             msg.set_flags(dpp::m_using_components_v2);
@@ -240,6 +251,9 @@ namespace discofloor
 
             find_game:
 
+            // required for post-game
+            set_rps_mention_if_unset(static_cast<bot*>(event.owner));
+
             rps::choice opp_choice;
             auto rps = std::find_if(games.begin(), games.end(), [&choices = rps::choices, &opp_choice, custom_id = event.custom_id](const rps::game& it)
             {
@@ -251,10 +265,11 @@ namespace discofloor
                         return true;
                     }
                 }
+                return false;
             });
             if (rps == games.end())
             {
-                event.reply(discofloor::container_msg("This game has expired, please create another. " + rps_mention, 0xFF0000));
+                event.reply(discofloor::container_msg("This game is invalid - create a new one using " + rps_mention, 0xFF0000));
                 co_return;
             }
 
@@ -267,17 +282,16 @@ namespace discofloor
                 co_return;
             }
 
+            dpp::component container;
+            container.set_type(dpp::cot_container);
+
             dpp::component title;
             title.set_type(dpp::cot_text_display);
             title.set_content(std::format(
                 "### {} {} :vs: {} {}",
                 host_player, rps::choices[rps->choice()].emoji,
                 rps::choices[opp_choice].emoji, opp_player));
-
-            dpp::component container;
-            container.set_type(dpp::cot_container);
-            container.add_component_v2(title);
-
+            
             dpp::component separator;
             separator.set_type(dpp::cot_separator);
             separator.set_spacing(dpp::sep_small);
@@ -300,6 +314,8 @@ namespace discofloor
             {
                 content.set_content(std::format("**{}** wins!{}", opp_player, motivator));
             }
+
+            container.add_component_v2(title);
             container.add_component_v2(separator);
             container.add_component_v2(content);
 
