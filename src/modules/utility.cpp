@@ -126,6 +126,76 @@ namespace discofloor
             //}
         }
 
+        static dpp::task<void> run_say(const run_event& event)
+        {
+            auto cluster = event.get_bot();
+            if (event.command_invoker() != cluster->app_owner())
+            {
+                event.reply(":no_entry: **| Only the instance owner can run this command.**");
+                co_return;
+            }
+
+            if (auto message_command = event.get_message_command())
+            {
+                static auto say_mention = cluster->get_command("say", dpp::ctxm_chat_input).value().get_mention();
+
+                // can't prompt dialogs via old-style chat commands
+                message_command->reply(":x: **| You must use " + say_mention + " instead**");
+                co_return;
+            }
+
+            std::vector<dpp::component> components;
+
+            auto& text_input = components.emplace_back();
+            text_input.set_id("say_message");
+            text_input.set_type(dpp::cot_text);
+            text_input.set_label("What do I say?");
+            text_input.set_text_style(dpp::text_paragraph);
+
+            for (int i = 0; i < 10; i++)
+            {
+                auto& attachment = components.emplace_back();
+                attachment.set_id("say_attachment_" + i);
+                attachment.set_type(dpp::cot_file_upload);
+                attachment.set_label("Make me attach file #" + (i + 1));
+                attachment.set_required(false);
+            }
+            event.get_slash_command()->dialog(dpp::interaction_modal_response("say_modal", "Say", components));
+        }
+
+        dpp::event_handle form_submit_handle = SIZE_MAX;
+        static dpp::task<void> form_submit_event(const dpp::form_submit_t& event)
+        {
+            if (!event.custom_id.starts_with("say_modal"))
+            {
+                co_return;
+            }
+
+            dpp::message msg(std::get<std::string>(event.components[0].value));
+            msg.add_file("result.json", event.raw_event, "application/json");
+            event.reply(msg);
+
+            /*
+            dpp::message msg(std::get<std::string>(event.components[0].value));
+
+            for (int i = 1; i <= 10; i++)
+            {
+                if (auto attachment_id = std::get_if<dpp::snowflake>(&event.components[i].value))
+                {
+                    auto& attachment = event.command.get_resolved_attachment(*attachment_id);
+
+                    auto result = co_await attachment.owner->owner->co_request(attachment.url, dpp::m_get);
+                    if (result.status != 200)
+                    {
+                        event.reply(dpp::message(":x: **| Failed to download attachment #" + std::to_string(i + 1) + "**").set_flags(dpp::m_ephemeral));
+                        co_return;
+                    }
+                    msg.add_file(attachment.filename, result.body, attachment.content_type);
+                }
+            }
+            event.reply(msg);*/
+        }
+
         virtual std::vector<command> commands(bot& bot) override final
         {
             command get_avatar("get avatar", dpp::ctxm_user, bot.me.id, run_get_avatar);
@@ -135,7 +205,21 @@ namespace discofloor
             //command extract_emojis_user("extract emojis", dpp::ctxm_user, bot.me.id, run_extract_emojis);
             // uncomment when we're able to get emojis from status and aboutme
 
-            return { get_avatar, get_banner, extract_emojis_message };
+            auto say_desc = "Makes " + bot.me.username + " say its unique thoughts (totally not controlled by " + bot.app_owner().username + ")";
+            command say("say", say_desc, bot.me.id, run_say);
+
+            return { get_avatar, get_banner, extract_emojis_message, say };
+        }
+
+        virtual bool init(bot& bot) override final
+        {
+            form_submit_handle = bot.on_form_submit.attach(form_submit_event);
+            return true;
+        }
+
+        virtual void destroy(bot& bot) override final
+        {
+            bot.on_form_submit.detach(form_submit_handle);
         }
     public:
         utility_module() : module("utility") {}

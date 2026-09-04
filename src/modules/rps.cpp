@@ -188,6 +188,7 @@ namespace discofloor
 
             // required for the expiry message for this rps game
             set_rps_mention_if_unset(static_cast<bot*>(event.owner));
+
             auto& rps = games.emplace_back(rps::game::id_from_modal(event.custom_id), host_player, rps_mention, choice_value, event);
 
             dpp::component container;
@@ -251,9 +252,6 @@ namespace discofloor
 
             find_game:
 
-            // required for post-game
-            set_rps_mention_if_unset(static_cast<bot*>(event.owner));
-
             rps::choice opp_choice;
             auto rps = std::find_if(games.begin(), games.end(), [&choices = rps::choices, &opp_choice, custom_id = event.custom_id](const rps::game& it)
             {
@@ -267,6 +265,10 @@ namespace discofloor
                 }
                 return false;
             });
+
+            // required for post-game
+            set_rps_mention_if_unset(static_cast<bot*>(event.owner));
+
             if (rps == games.end())
             {
                 event.reply(discofloor::container_msg("This game is invalid - create a new one using " + rps_mention, 0xFF0000));
