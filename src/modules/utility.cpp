@@ -1,6 +1,8 @@
 #include <discofloor/bot.h>
 #include <discofloor/utility.h>
 
+#include <fixedphilip/math.h>
+
 #include <regex>
 
 namespace discofloor
@@ -151,14 +153,25 @@ namespace discofloor
             text_input.set_type(dpp::cot_text);
             text_input.set_label("What do I say?");
             text_input.set_text_style(dpp::text_paragraph);
+            text_input.set_required(false); // sending empty messages will silently fail, it's fine
 
-            for (int i = 0; i < 10; i++)
+            auto& think_for = components.emplace_back();
+            think_for.set_id("say_think_for");
+            think_for.set_type(dpp::cot_text);
+            think_for.set_label("How long do I think for?");
+            think_for.set_text_style(dpp::text_paragraph);
+            think_for.set_default_value("0 s");
+            think_for.set_required(true);
+
+            if (event.get_cmd_optional_param_value<bool>("files", false))
             {
-                auto& attachment = components.emplace_back();
-                attachment.set_id("say_attachment_" + i);
-                attachment.set_type(dpp::cot_file_upload);
-                attachment.set_label("Make me attach file #" + (i + 1));
-                attachment.set_required(false);
+                auto& attachments = components.emplace_back();
+                attachments.set_id("say_attachments");
+                attachments.set_type(dpp::cot_file_upload);
+                attachments.set_label("Make me attach files");
+                //attachments.set_required(false); // seems to be broken dpp side for now? hence why we need the files param
+                attachments.set_min_values(1);
+                attachments.set_max_values(10);
             }
             event.get_slash_command()->dialog(dpp::interaction_modal_response("say_modal", "Say", components));
         }
@@ -172,28 +185,37 @@ namespace discofloor
             }
 
             dpp::message msg(std::get<std::string>(event.components[0].value));
-            msg.add_file("result.json", event.raw_event, "application/json");
-            event.reply(msg);
 
-            /*
-            dpp::message msg(std::get<std::string>(event.components[0].value));
-
-            for (int i = 1; i <= 10; i++)
+            fixedphilip::math::number_t think_for = 0.0;
+            try
             {
-                if (auto attachment_id = std::get_if<dpp::snowflake>(&event.components[i].value))
-                {
-                    auto& attachment = event.command.get_resolved_attachment(*attachment_id);
-
-                    auto result = co_await attachment.owner->owner->co_request(attachment.url, dpp::m_get);
-                    if (result.status != 200)
-                    {
-                        event.reply(dpp::message(":x: **| Failed to download attachment #" + std::to_string(i + 1) + "**").set_flags(dpp::m_ephemeral));
-                        co_return;
-                    }
-                    msg.add_file(attachment.filename, result.body, attachment.content_type);
-                }
+                fixedphilip::math::conversion::convert(std::get<std::string>(event.components[1].value), "s", -1, false, nullptr, nullptr, &think_for);
             }
-            event.reply(msg);*/
+            catch (std::exception& e)
+            {
+                event.reply(dpp::message(std::format(":x: **| Failed to parse thinking duration:** {}", e.what())).set_flags(dpp::m_ephemeral));
+                co_return;
+            }
+
+            for (auto& [snowflake, attachment] : event.command.resolved.attachments)
+            {
+                auto result = co_await event.owner->co_request(attachment.url, dpp::m_get);
+                if (result.status != 200)
+                {
+                    event.reply(dpp::message(":x: **| Failed to download at least one attachment**").set_flags(dpp::m_ephemeral));
+                    co_return;
+                }
+                msg.add_file(attachment.filename, result.body, attachment.content_type);
+            }
+
+            if (think_for > 0.0)
+            {
+                co_await event.co_thinking();
+                co_await event.owner->co_sleep(think_for);
+                event.edit_original_response(msg);
+                co_return;
+            }
+            event.reply(msg);
         }
 
         virtual std::vector<command> commands(bot& bot) override final
@@ -207,6 +229,7 @@ namespace discofloor
 
             auto say_desc = "Makes " + bot.me.username + " say its unique thoughts (totally not controlled by " + bot.app_owner().username + ")";
             command say("say", say_desc, bot.me.id, run_say);
+            say.add_option(dpp::command_option(dpp::co_boolean, "files", "Has files"));
 
             return { get_avatar, get_banner, extract_emojis_message, say };
         }

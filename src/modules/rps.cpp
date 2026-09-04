@@ -271,7 +271,7 @@ namespace discofloor
 
             if (rps == games.end())
             {
-                event.reply(discofloor::container_msg("This game is invalid - create a new one using " + rps_mention, 0xFF0000));
+                event.reply(":x: **| This game is invalid - create a new one using " + rps_mention + "**");
                 co_return;
             }
 
@@ -280,7 +280,7 @@ namespace discofloor
 
             if (host_player == opp_player)
             {
-                event.reply(discofloor::container_msg(std::format("**{}**, you can't play against yourself!", host_player), 0xFF0000));
+                event.reply(":x: **| " + host_player + ", you can't play against yourself!**");
                 co_return;
             }
 

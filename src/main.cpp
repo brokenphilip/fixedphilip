@@ -157,6 +157,11 @@ int main(int argc, char* argv[])
             cmd.set_interaction_contexts({ dpp::itc_bot_dm, dpp::itc_guild, dpp::itc_private_channel });
         });
 
+        bot.reply_error_message([](const std::string& error)
+        {
+            return dpp::message(":x: **|** " + error);
+        });
+
         bot.start();
     }
 
