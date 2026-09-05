@@ -10,6 +10,167 @@ namespace discofloor
 {
     class fun_module : public module
     {
+        struct fun_config : public pretty_print_json_file
+        {
+            struct emoji
+            {
+                std::string name = "";
+                dpp::snowflake id = 0;
+                bool animated = false;
+
+                nlohmann::json struct_to_json(const bulbtils::file::settings& save_settings) const
+                {
+                    return
+                    {
+                        { "name", name },
+                        { "id", id },
+                        { "animated", animated },
+                    };
+                }
+
+                bool json_to_struct(const nlohmann::json& data, const bulbtils::file::settings& load_settings, const std::string& internal_emoji_name)
+                {
+                    bulbtils::file::settings new_load_settings;
+
+                    new_load_settings.warning_callback = [&load_settings, &internal_emoji_name](const std::string& log)
+                        { load_settings.warning(std::format("Loading emoji '{}' - {}", internal_emoji_name, log)); };
+                    new_load_settings.error_callback = [&load_settings, &internal_emoji_name](const std::string& log)
+                        { load_settings.error(std::format("Loading emoji '{}' - {}", internal_emoji_name, log)); };
+
+                    if (!json_try_at(data, new_load_settings, "name", name))
+                    {
+                        return false;
+                    }
+
+                    std::string id_str;
+                    if (!json_try_at(data, new_load_settings, "id", id_str))
+                    {
+                        return false;
+                    }
+
+                    id = dpp::snowflake(id_str);
+                    if (!id)
+                    {
+                        new_load_settings.error("invalid ID");
+                        return false;
+                    }
+
+                    if (!json_try_at(data, new_load_settings, "animated", animated))
+                    {
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                auto mention()
+                {
+                    return dpp::emoji::get_mention(name, id, animated);
+                }
+            };
+
+            emoji heads, tails, flipping;
+            emoji rolling[6];
+            emoji rolled[6];
+
+            virtual nlohmann::json struct_to_json(const bulbtils::file::settings& save_settings) const override final
+            {
+                auto rolling_array = nlohmann::json::array();
+                for (int i = 0; i < 6; i++)
+                {
+                    rolling_array += rolling[i].struct_to_json(save_settings);
+                }
+
+                auto rolled_array = nlohmann::json::array();
+                for (int i = 0; i < 6; i++)
+                {
+                    rolled_array += rolled[i].struct_to_json(save_settings);
+                }
+
+                return
+                {
+                    { "heads", heads.struct_to_json(save_settings) },
+                    { "tails", tails.struct_to_json(save_settings) },
+                    { "flipping", flipping.struct_to_json(save_settings) },
+                    { "rolling", rolling_array },
+                    { "rolled", rolled_array },
+                };
+            }
+            virtual bool json_to_struct(const nlohmann::json& data, const bulbtils::file::settings& load_settings) override final
+            {
+                nlohmann::json heads_json;
+                if (!json_try_at(data, load_settings, "heads", heads_json))
+                {
+                    return false;
+                }
+                if (!heads.json_to_struct(heads_json, load_settings, "heads"))
+                {
+                    return false;
+                }
+
+                nlohmann::json tails_json;
+                if (!json_try_at(data, load_settings, "tails", tails_json))
+                {
+                    return false;
+                }
+                if (!tails.json_to_struct(tails_json, load_settings, "tails"))
+                {
+                    return false;
+                }
+
+                nlohmann::json flipping_json;
+                if (!json_try_at(data, load_settings, "flipping", flipping_json))
+                {
+                    return false;
+                }
+                if (!flipping.json_to_struct(flipping_json, load_settings, "flipping"))
+                {
+                    return false;
+                }
+
+                nlohmann::json rolling_array;
+                if (!json_try_at(data, load_settings, "rolling", rolling_array))
+                {
+                    return false;
+                }
+                auto rolling_count = rolling_array.size();
+                if (rolling_count != 6)
+                {
+                    load_settings.error("Expected 6 'rolling' emojis, found " + rolling_count);
+                    return false;
+                }
+                for (int i = 0; i < 6; i++)
+                {
+                    if (!rolling[i].json_to_struct(rolling_array[i], load_settings, std::format("rolling[{}]", i)))
+                    {
+                        return false;
+                    }
+                }
+
+                nlohmann::json rolled_array;
+                if (!json_try_at(data, load_settings, "rolled", rolled_array))
+                {
+                    return false;
+                }
+                auto rolled_count = rolled_array.size();
+                if (rolled_count != 6)
+                {
+                    load_settings.error("Expected 6 'rolled' emojis, found " + rolled_count);
+                    return false;
+                }
+                for (int i = 0; i < 6; i++)
+                {
+                    if (!rolled[i].json_to_struct(rolled_array[i], load_settings, std::format("rolled[{}]", i)))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        };
+
+        fun_config config;
+
         static auto random(int min_inclusive, int max_inclusive)
         {
             static std::random_device dev;
@@ -50,58 +211,61 @@ namespace discofloor
                 co_await cluster->co_sleep(wait_seconds);
 
                 slash_command->edit_original_response(dpp::message(edit));
-
             }
         }
 
-        static dpp::task<void> run_coin(const run_event& event)
+        dpp::task<void> run_coin(const run_event& event)
         {
-            static const std::vector<dpp::emoji> coins
-            {
-                { "fp_heads", 1541915227258490970, dpp::e_animated },
-                { "fp_tails", 1541915228533559336, dpp::e_animated },
-            };
-            auto flipping = dpp::emoji::get_mention("fp_coin", 1541915249970647112, true);
-            
-            bool heads = random(0, 1);
-            auto flipped = std::format("{} **| You flipped {}.**", coins[heads].get_mention(), heads ? "heads" : "tails");
+            auto flipping_msg = config.flipping.mention();
 
-            co_await send_wait_edit(event, flipping, 2, flipped);
+            bool heads = random(0, 1);
+            auto flipped = heads ? config.heads.mention() : config.tails.mention();
+
+            auto flipped_msg = std::format("{} **| You flipped {}.**", flipped, heads ? "heads" : "tails");
+
+            co_await send_wait_edit(event, flipping_msg, 2, flipped_msg);
         }
 
-        static dpp::task<void> run_dice(const run_event& event)
+        dpp::task<void> run_dice(const run_event& event)
         {
-            static const std::vector<dpp::emoji> rolling
-            {
-                { "fp_rolling_1", 1541889993557942475, dpp::e_animated },
-                { "fp_rolling_2", 1541889989133205514, dpp::e_animated },
-                { "fp_rolling_3", 1541889981335736510, dpp::e_animated },
-                { "fp_rolling_4", 1541889983831478312, dpp::e_animated },
-                { "fp_rolling_5", 1541889986050138303, dpp::e_animated },
-                { "fp_rolling_6", 1541889991242940658, dpp::e_animated },
-            };
-            static const std::vector<dpp::emoji> rolled
-            {
-                { "fp_rolled_1", 1541890129742798948 },
-                { "fp_rolled_2", 1541890128690020414 },
-                { "fp_rolled_3", 1541890126987132978 },
-                { "fp_rolled_4", 1541890125871579217 },
-                { "fp_rolled_5", 1541890124697182270 },
-                { "fp_rolled_6", 1541890123589746870 },
-            };
-
             auto number = random(0, 5);
-            auto rolling_msg = rolling[number].get_mention();
-            auto rolled_msg = std::format("{} **| You rolled a {}.**", rolled[number].get_mention(), number + 1);
+
+            auto& rolling = config.rolling[number];
+            auto& rolled = config.rolled[number];
+
+            auto rolling_msg = rolling.mention();
+            auto rolled_msg = std::format("{} **| You rolled a {}.**", rolled.mention(), number + 1);
 
             co_await send_wait_edit(event, rolling_msg, 5, rolled_msg);
         }
+
         virtual std::vector<command> commands(bot& bot) override final
         {
-            command coin("coin", "Flip a coin", bot.me.id, run_coin);
-            command dice("dice", "Roll the dice", bot.me.id, run_dice);
+            command coin("coin", "Flip a coin", bot.me.id, 
+                [this](const auto& event) -> dpp::task<void> { co_await run_coin(event); });
+
+            command dice("dice", "Roll the dice", bot.me.id, 
+                [this](const auto& event) -> dpp::task<void> { co_await run_dice(event); });
 
             return { coin, dice };
+        }
+
+        virtual bool init(bot& bot) override final
+        {
+            bulbtils::file::settings config_settings
+            {
+                .filename = "fun.json",
+                .create_if_not_found = true,
+            };
+            bot.append_loggers(config_settings);
+
+            auto result = config.load(config_settings);
+            if (result != bulbtils::file::r_success)
+            {
+                bot.log(dpp::ll_error, "Failed to load 'fun.json' - fun module will not be loaded");
+                return false;
+            }
+            return true;
         }
     public:
         fun_module() : module("fun") {}

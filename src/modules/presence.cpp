@@ -8,7 +8,7 @@ namespace discofloor
 {
 	class presence_module : public module
 	{
-		class config : public pretty_print_json_file
+		class presence_config : public pretty_print_json_file
 		{
 			// just online/idle is functional?
 			const std::unordered_map<dpp::presence_status, std::string> status_to_string
@@ -111,7 +111,7 @@ namespace discofloor
 
 		bot* owner = nullptr;
 
-		presence_module::config config;
+		presence_config config;
 
 		dpp::timer timer_handle = SIZE_MAX;
 		dpp::event_handle ready_handle = SIZE_MAX;

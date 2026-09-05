@@ -269,6 +269,7 @@ namespace discofloor
             // required for post-game
             set_rps_mention_if_unset(static_cast<bot*>(event.owner));
 
+            // just in case the bot crashes and doesn't get to hide the buttons (which we can't do post-mortem)
             if (rps == games.end())
             {
                 event.reply(":x: **| This game is invalid - create a new one using " + rps_mention + "**");
