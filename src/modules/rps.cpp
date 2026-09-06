@@ -278,6 +278,9 @@ namespace discofloor
 
             find_game:
 
+            // lock it all the way (getting now, erasing later)
+            std::unique_lock _(games_mutex);
+
             rps::choice opp_choice;
             auto rps = std::find_if(games.begin(), games.end(), [&choices = rps::choices, &opp_choice, custom_id = event.custom_id](const rps::game& it)
             {
@@ -353,11 +356,7 @@ namespace discofloor
             msg.add_component_v2(container);
 
             rps->edit_response(msg);
-
-            {
-                std::unique_lock _(games_mutex);
-                games.erase(rps);
-            }
+            games.erase(rps);
 
             event.reply(discofloor::container_msg(std::format(
                 "**{}** and **{}** played rock, paper, scissors!\n"
