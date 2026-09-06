@@ -103,6 +103,7 @@ namespace discofloor
 
                 std::string reply_message = std::format(":frame_photo: **| Extracted {} emoji{}{} from this message:**",
                     extracted_emojis.size(), extracted_emojis.size() == 1 ? "" : "s", has_sticker? " and 1 sticker" : "");
+
                 for (int i = 0; i < extracted_emojis.size(); i++)
                 {
                     auto& emoji = extracted_emojis[i].emoji;

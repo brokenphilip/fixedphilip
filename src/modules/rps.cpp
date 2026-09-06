@@ -57,11 +57,8 @@ namespace discofloor
 
         class game
         {
-            // incrementing counter for rps game ids
-            static inline uint32_t counter_ = 0;
-
             // this rps game's id, used to match button/form ids
-            uint32_t id_;
+            uint64_t id_;
 
             // the mention of the host player
             std::string player_;
@@ -75,8 +72,16 @@ namespace discofloor
             // timed interaction of the original response
             timed_interaction response_;
 
+            // is this game complete
+            std::atomic_bool complete_ = false;
+
             void on_timeout(const timed_interaction& response)
             {
+                if (complete_)
+                {
+                    return;
+                }
+
                 dpp::component content;
                 content.set_type(dpp::cot_text_display);
                 content.set_content(std::format(
@@ -94,30 +99,37 @@ namespace discofloor
 
                 response.edit(msg);
             }
-        public:
-            game(uint32_t id, const std::string& player, const std::string& command, choice choice, const dpp::form_submit_t& event)
-                : id_(id), player_(player), command_(command), choice_(choice), response_(event, [this](const timed_interaction& response) { on_timeout(response); }) {}
 
-            void edit_response(const dpp::message& new_msg) { response_.edit(new_msg); }
-
-            // component custom id for the given rps game (id)
-            std::string custom_id(const std::string& prefix) const { return prefix + "_" + std::to_string(id_); }
-
-            // these two funcs decide the id of an rps_game
-            static std::string new_modal() { return "rps_modal_" + std::to_string(counter_++); }
-            static uint32_t id_from_modal(const std::string& modal)
+            static uint64_t id_from_modal(const std::string& modal)
             {
                 auto id = modal;
                 bulbtils::string::inplace::replace_all(id, "rps_modal_", "");
                 try
                 {
-                    return std::stoul(id);
+                    return std::stoull(id);
                 }
                 catch (std::exception& e)
                 {
                     return -1;
                 }
             }
+        public:
+            game(const std::string& modal, const std::string& player, const std::string& command, choice choice, const dpp::form_submit_t& event)
+                : id_(id_from_modal(modal)), player_(player), command_(command), choice_(choice), response_(event, [this](const timed_interaction& response) { on_timeout(response); }) {}
+
+            void edit_response(const dpp::message& new_msg)
+            {
+                response_.edit(new_msg);
+                complete_ = true;
+            }
+
+            bool invalid() { return response_.timed_out(); }
+
+            // component custom id for the given rps game (id)
+            std::string custom_id(const std::string& prefix) const { return prefix + "_" + std::to_string(id_); }
+
+            // modal custom id for the rps command, later used to create the rps game
+            static std::string new_modal() { return "rps_modal_" + std::to_string(std::time(nullptr)); }
 
             auto player() { return player_; }
             auto choice() { return choice_; }
@@ -127,6 +139,17 @@ namespace discofloor
     class rps_module : public module
     {
         std::vector<rps::game> games;
+        std::shared_mutex games_mutex;
+
+        dpp::timer games_timer_handle = 0;
+        void remove_invalid_games()
+        {
+            std::unique_lock _(games_mutex);
+            std::erase_if(games, [](rps::game& game)
+            {
+                return game.invalid();
+            });
+        }
 
         std::string rps_mention = "`/rps`";
         void set_rps_mention_if_unset(bot* cluster)
@@ -189,7 +212,10 @@ namespace discofloor
             // required for the expiry message for this rps game
             set_rps_mention_if_unset(static_cast<bot*>(event.owner));
 
-            auto& rps = games.emplace_back(rps::game::id_from_modal(event.custom_id), host_player, rps_mention, choice_value, event);
+            {
+                std::unique_lock _(games_mutex);
+                auto& rps = games.emplace_back(event.custom_id, host_player, rps_mention, choice_value, event);
+            }
 
             dpp::component container;
             container.set_type(dpp::cot_container);
@@ -266,19 +292,19 @@ namespace discofloor
                 return false;
             });
 
+            auto opp_player = event.command.usr.get_mention();
+
             // required for post-game
             set_rps_mention_if_unset(static_cast<bot*>(event.owner));
 
             // just in case the bot crashes and doesn't get to hide the buttons (which we can't do post-mortem)
             if (rps == games.end())
             {
-                event.reply(":x: **| This game is invalid - create a new one using " + rps_mention + "**");
+                event.reply(":x: **| " + opp_player + ", this game is invalid - create a new one using " + rps_mention + "**");
                 co_return;
             }
 
             auto host_player = rps->player();
-            auto opp_player = event.command.usr.get_mention();
-
             if (host_player == opp_player)
             {
                 event.reply(":x: **| " + host_player + ", you can't play against yourself!**");
@@ -327,6 +353,12 @@ namespace discofloor
             msg.add_component_v2(container);
 
             rps->edit_response(msg);
+
+            {
+                std::unique_lock _(games_mutex);
+                games.erase(rps);
+            }
+
             event.reply(discofloor::container_msg(std::format(
                 "**{}** and **{}** played rock, paper, scissors!\n"
                 "-# Click the reply to see the results, or create a new game using {}",
@@ -345,11 +377,13 @@ namespace discofloor
         {
             form_submit_handle = bot.on_form_submit.attach([this](const auto& event) -> dpp::task<void> { co_await form_submit_event(event); });
             button_click_handle = bot.on_button_click.attach([this](const auto& event) -> dpp::task<void> { co_await button_click_event(event); });
+            games_timer_handle = bot.start_timer([this](const dpp::timer& timer) { remove_invalid_games(); }, 60);
             return true;
         }
 
         virtual void destroy(bot& bot) override final
         {
+            bot.stop_timer(games_timer_handle);
             bot.on_button_click.detach(button_click_handle);
             bot.on_form_submit.detach(form_submit_handle);
             games.clear();
