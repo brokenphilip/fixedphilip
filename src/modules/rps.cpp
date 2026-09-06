@@ -212,10 +212,8 @@ namespace discofloor
             // required for the expiry message for this rps game
             set_rps_mention_if_unset(static_cast<bot*>(event.owner));
 
-            {
-                std::unique_lock _(games_mutex);
-                auto& rps = games.emplace_back(event.custom_id, host_player, rps_mention, choice_value, event);
-            }
+            std::unique_lock _(games_mutex);
+            auto& rps = games.emplace_back(event.custom_id, host_player, rps_mention, choice_value, event);
 
             dpp::component container;
             container.set_type(dpp::cot_container);
