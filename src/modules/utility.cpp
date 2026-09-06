@@ -90,13 +90,19 @@ namespace discofloor
                     }
                 }
 
-                if (extracted_emojis.empty())
+                bool has_sticker = message.stickers.size();
+
+                dpp::sticker asd;
+                asd.get_url();
+
+                if (extracted_emojis.empty() && !has_sticker)
                 {
-                    event.reply(dpp::message(":frame_photo: **| No emojis found in this message.**").set_flags(dpp::m_ephemeral));
+                    event.reply(dpp::message(":frame_photo: **| No emojis or stickers found in this message.**").set_flags(dpp::m_ephemeral));
                     co_return;
                 }
 
-                std::string reply_message = std::format(":frame_photo: **| Extracted {} emoji{} from this message:**", extracted_emojis.size(), extracted_emojis.size() == 1 ? "" : "s");
+                std::string reply_message = std::format(":frame_photo: **| Extracted {} emoji{}{} from this message:**",
+                    extracted_emojis.size(), extracted_emojis.size() == 1 ? "" : "s", has_sticker? " and 1 sticker" : "");
                 for (int i = 0; i < extracted_emojis.size(); i++)
                 {
                     auto& emoji = extracted_emojis[i].emoji;
@@ -117,7 +123,10 @@ namespace discofloor
                             emoji.name, std::to_string(emoji.id), emoji.get_url(4096, dpp::i_png, false),
                             emoji_animated.name, std::to_string(emoji_animated.id), emoji_animated.get_url(4096, dpp::i_gif, true));
                     }
-                        
+                }
+                if (has_sticker)
+                {
+                    reply_message += std::format("\n{}. \"{}\" - <{}>", extracted_emojis.size() + 1, message.stickers[0].name, message.stickers[0].get_url());
                 }
                 event.reply(dpp::message(reply_message).set_flags(dpp::m_ephemeral));
             }
@@ -220,11 +229,11 @@ namespace discofloor
 
         virtual std::vector<command> commands(bot& bot) override final
         {
-            command get_avatar("get avatar", dpp::ctxm_user, bot.me.id, run_get_avatar);
-            command get_banner("get banner", dpp::ctxm_user, bot.me.id, run_get_banner);
+            command get_avatar("Get avatar", dpp::ctxm_user, bot.me.id, run_get_avatar);
+            command get_banner("Get banner", dpp::ctxm_user, bot.me.id, run_get_banner);
 
-            command extract_emojis_message("extract emojis", dpp::ctxm_message, bot.me.id, run_extract_emojis);
-            //command extract_emojis_user("extract emojis", dpp::ctxm_user, bot.me.id, run_extract_emojis);
+            command extract_emojis_message("Extract emojis/sticker", dpp::ctxm_message, bot.me.id, run_extract_emojis);
+            //command extract_emojis_user("Extract emojis", dpp::ctxm_user, bot.me.id, run_extract_emojis);
             // uncomment when we're able to get emojis from status and aboutme
 
             auto say_desc = "Makes " + bot.me.username + " say its unique thoughts (totally not controlled by " + bot.app_owner().username + ")";

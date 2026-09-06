@@ -162,6 +162,7 @@ namespace discofloor
 			auto result = config.load(config_settings);
 			if (result != bulbtils::file::r_success && result != bulbtils::file::r_file_not_found)
 			{
+				bot.log(dpp::ll_error, "Failed to load 'presence.json' - presence module will not be loaded");
 				return false;
 			}
 
