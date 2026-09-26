@@ -6,7 +6,7 @@
 
 namespace discofloor
 {
-    class meta_module : public module
+    class meta_module : public bot_module
     {
         static dpp::task<void> run_shutdown(const run_event& event)
         {
@@ -297,12 +297,12 @@ namespace discofloor
             co_return;
         }
 
-        virtual std::vector<command> commands(bot& bot) override final
+        virtual std::vector<bot_command> commands(bot& bot) override final
         {
-            command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
-            command status("status", "Displays bot status", bot.me.id, run_status);
+            bot_command shutdown("shutdown", "Shuts the bot down", bot.me.id, run_shutdown);
+            bot_command status("status", "Displays bot status", bot.me.id, run_status);
 
-            command storage("storage", "Commands for bot data (storage) management", bot.me.id, run_storage);
+            bot_command storage("storage", "Commands for bot data (storage) management", bot.me.id, run_storage);
             std::vector<dpp::command_option> storage_subcmd_groups = 
             {
                 {dpp::co_sub_command_group, "usage", "Get usage/quota info for an ID"},
@@ -332,12 +332,12 @@ namespace discofloor
                 storage.add_option(subcmd_group);
             }
 
-            command invite("invite", "Displays bot invite link", bot.me.id, run_invite);
+            bot_command invite("invite", "Displays bot invite link", bot.me.id, run_invite);
 
             return { shutdown, status, storage, invite };
         }
     public:
-        meta_module() : module("meta") {}
+        meta_module() : bot_module("meta") {}
     };
     static meta_module instance;
 }

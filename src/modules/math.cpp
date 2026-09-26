@@ -5,7 +5,7 @@
 
 namespace discofloor
 {
-	class math_module : public module
+	class math_module : public bot_module
 	{
 		static dpp::task<void> run_calculate(const run_event& event)
 		{
@@ -111,9 +111,9 @@ namespace discofloor
             event.thinking_end(response);
 		}
 
-		virtual std::vector<command> commands(bot& bot) override final
+		virtual std::vector<bot_command> commands(bot& bot) override final
 		{
-			command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate,
+            bot_command calculate("calculate", "Calculate a math expression", bot.me.id, run_calculate,
             {
                 "\"1 + 2 + 3\"",
                 "1/11 10",
@@ -127,7 +127,7 @@ namespace discofloor
 					.set_max_value(std::numeric_limits<double>::max_digits10))
 				.add_option(dpp::command_option(dpp::co_boolean, "separate", "Separate the result's digits per thousands? (true by default)"));
 
-			command convert("convert", "Convert between units or currencies", bot.me.id, run_convert,
+            bot_command convert("convert", "Convert between units or currencies", bot.me.id, run_convert,
             {
                 "\"123 meters\" cm",
                 "\"123 * 456 seconds\" \"hours min s\"",
@@ -144,7 +144,7 @@ namespace discofloor
 			return { calculate, convert };
 		}
 	public:
-		math_module() : module("math") {}
+		math_module() : bot_module("math") {}
 	};
     static math_module instance;
 }

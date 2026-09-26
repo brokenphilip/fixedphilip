@@ -7,7 +7,7 @@
 
 namespace discofloor
 {
-    class utility_module : public module
+    class utility_module : public bot_module
     {
         static dpp::task<void> run_get_avatar(const run_event& event)
         {
@@ -228,17 +228,17 @@ namespace discofloor
             event.reply(msg);
         }
 
-        virtual std::vector<command> commands(bot& bot) override final
+        virtual std::vector<bot_command> commands(bot& bot) override final
         {
-            command get_avatar("Get avatar", dpp::ctxm_user, bot.me.id, run_get_avatar);
-            command get_banner("Get banner", dpp::ctxm_user, bot.me.id, run_get_banner);
+            bot_command get_avatar("Get avatar", dpp::ctxm_user, bot.me.id, run_get_avatar);
+            bot_command get_banner("Get banner", dpp::ctxm_user, bot.me.id, run_get_banner);
 
-            command extract_emojis_message("Extract emojis/sticker", dpp::ctxm_message, bot.me.id, run_extract_emojis);
-            //command extract_emojis_user("Extract emojis", dpp::ctxm_user, bot.me.id, run_extract_emojis);
+            bot_command extract_emojis_message("Extract emojis/sticker", dpp::ctxm_message, bot.me.id, run_extract_emojis);
+            //bot_command extract_emojis_user("Extract emojis", dpp::ctxm_user, bot.me.id, run_extract_emojis);
             // uncomment when we're able to get emojis from status and aboutme
 
             auto say_desc = "Makes " + bot.me.username + " say its unique thoughts (totally not controlled by " + bot.app_owner().username + ")";
-            command say("say", say_desc, bot.me.id, run_say);
+            bot_command say("say", say_desc, bot.me.id, run_say);
             say.add_option(dpp::command_option(dpp::co_boolean, "files", "Has files"));
 
             return { get_avatar, get_banner, extract_emojis_message, say };
@@ -255,7 +255,7 @@ namespace discofloor
             bot.on_form_submit.detach(form_submit_handle);
         }
     public:
-        utility_module() : module("utility") {}
+        utility_module() : bot_module("utility") {}
     };
     static utility_module instance;
 }

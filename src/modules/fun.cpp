@@ -8,7 +8,7 @@
 
 namespace discofloor
 {
-    class fun_module : public module
+    class fun_module : public bot_module
     {
         struct fun_config : public pretty_print_json_file
         {
@@ -239,12 +239,12 @@ namespace discofloor
             co_await send_wait_edit(event, rolling_msg, 5, rolled_msg);
         }
 
-        virtual std::vector<command> commands(bot& bot) override final
+        virtual std::vector<bot_command> commands(bot& bot) override final
         {
-            command coin("coin", "Flip a coin", bot.me.id, 
+            bot_command coin("coin", "Flip a coin", bot.me.id, 
                 [this](const auto& event) -> dpp::task<void> { co_await run_coin(event); });
 
-            command dice("dice", "Roll the dice", bot.me.id, 
+            bot_command dice("dice", "Roll the dice", bot.me.id,
                 [this](const auto& event) -> dpp::task<void> { co_await run_dice(event); });
 
             return { coin, dice };
@@ -268,7 +268,7 @@ namespace discofloor
             return true;
         }
     public:
-        fun_module() : module("fun") {}
+        fun_module() : bot_module("fun") {}
     };
     static fun_module instance;
 }

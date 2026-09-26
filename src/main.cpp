@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
 
         discofloor::bot bot(bot_config, logger, intents, total_shards, cluster_id, max_clusters);
 
-        bot.for_each_command([](discofloor::command& cmd)
+        bot.for_each_command([](discofloor::bot_command& cmd)
         {
             cmd.set_interaction_contexts({ dpp::itc_bot_dm, dpp::itc_guild, dpp::itc_private_channel });
         });

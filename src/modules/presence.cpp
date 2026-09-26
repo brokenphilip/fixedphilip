@@ -6,7 +6,7 @@
 
 namespace discofloor
 {
-	class presence_module : public module
+	class presence_module : public bot_module
 	{
 		class presence_config : public pretty_print_json_file
 		{
@@ -179,7 +179,7 @@ namespace discofloor
 			bot.on_ready.detach(ready_handle);
 		}
 	public:
-		presence_module() : module("presence") {}
+		presence_module() : bot_module("presence") {}
 	};
 	static presence_module instance;
 }
