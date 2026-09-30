@@ -1,5 +1,4 @@
 #include <discofloor/bot.h>
-#include <discofloor/utility.h>
 #include <discofloor/timed_interaction.h>
 
 #include <bulbtils/string.h>
@@ -80,7 +79,7 @@ namespace discofloor
             timed_interaction game_interaction_;
 
             // next available rps game id
-            // cannot use 0 because bot restarts will make old games invalid
+            // cannot use 0 because the bot will start overwriting games upon restart
             // cannot use std::time(nullptr) as id directly in case 2 games start at once
             static inline uint64_t next_id_ = std::time(nullptr);
 
@@ -137,11 +136,11 @@ namespace discofloor
             auto completed() const { return game_interaction_.timed_out(); }
 
             // create a new rps game given the (host) player and choice, creating the game interaction in the process
-            game(const std::string& player, rps::choice choice, const std::string& modal, const std::string& command, const dpp::form_submit_t& event)
-                : host_choice_(player, choice),
+            game(const std::string& player, rps::choice choice, const std::string& modal, const std::string& command, const dpp::form_submit_t& event) :
+                host_choice_(player, choice),
                 id_(id_from_modal(modal)),
                 command_(command),
-                game_interaction_(event, lifespan, [this](timed_interaction& response) { on_timeout(); })
+                game_interaction_(event, lifespan, [this](timed_interaction&) { on_timeout(); })
             {
                 dpp::component container;
                 container.set_type(dpp::cot_container);
@@ -378,6 +377,14 @@ namespace discofloor
                 message_command->reply(":x: **| You can only create RPS games using " + rps_command_text + "**");
                 co_return;
             }
+            auto slash_command = event.get_slash_command();
+
+            auto context = slash_command->command.context;
+            if (context && context == dpp::itc_bot_dm)
+            {
+                slash_command->reply(":x: **| Sorry, I can't play RPS with you :(**");
+                co_return;
+            }
 
             dpp::component select_rps;
             select_rps.set_id("select_rps");
@@ -394,7 +401,7 @@ namespace discofloor
 
         virtual std::vector<bot_command> commands(bot& bot) override final
         {
-            bot_command rps("rps", "Initiate a 'Rock, Paper, Scissors' game", bot.me.id,
+            bot_command rps("rps", "Create a new 'Rock, Paper, Scissors' game", bot.me.id,
                 [this](const auto& event) -> dpp::task<void> { co_await run_rps(event); });
 
             return { rps };

@@ -1,6 +1,5 @@
 #include <discofloor/bot.h>
 #include <discofloor/version.h>
-#include <discofloor/utility.h>
 
 #include <fixedphilip/build.h>
 
