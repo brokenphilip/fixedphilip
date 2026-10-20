@@ -63,7 +63,8 @@ namespace fixedphilip::math
 		return result;
 	}
 
-	void conversion::convert(const std::string& input, const std::string& destination_units, int decimals, bool separate, std::string* result_out, std::string* family_name_out, number_t* single_dest_result_out)
+	void conversion::convert(const std::string& input, const std::string& destination_units, int decimals, bool separate,
+		std::string* result_out, std::string* family_name_out, number_t* single_dest_result_out)
 	{
 		if (input.empty())
 		{
@@ -93,7 +94,8 @@ namespace fixedphilip::math
 			bool input; // false -> dest_units
 			std::string family;
 
-			all_unit_search_result(conversion::unit* unit, size_t index, const std::string& family, bool input) : unit_search_result(unit, index), family(family), input(input) {}
+			all_unit_search_result(conversion::unit* unit, size_t index, const std::string& family, bool input)
+				: unit_search_result(unit, index), family(family), input(input) {}
 		};
 		std::vector<all_unit_search_result> all_results;
 
@@ -300,10 +302,13 @@ namespace fixedphilip::math
 		else
 		{
 			std::string error_str = std::format("Failed to find a suitable conversion for \"{}\" to \"{}\" - {} unit{} detected:", 
-				dpp::utility::markdown_escape(input, true), dpp::utility::markdown_escape(destination_units, true), all_results.size(), all_results.size() == 1 ? "" : "s");
+				dpp::utility::markdown_escape(input, true), dpp::utility::markdown_escape(destination_units, true),
+				all_results.size(), all_results.size() == 1 ? "" : "s");
+
 			for (auto& result : all_results)
 			{
-				error_str += std::format("\n• {} `{}` (\"{}\", {})", result.input ? "From" : "To", result.input ? input_splits[result.index] : dest_units_splits[result.index], result.unit->display_name, result.family);
+				error_str += std::format("\n• {} `{}` (\"{}\", {})",
+					result.input ? "From" : "To", result.input ? input_splits[result.index] : dest_units_splits[result.index], result.unit->display_name, result.family);
 			}
 			throw fixedphilip::math::conversion::error(error_str);
 		}
@@ -330,7 +335,8 @@ namespace fixedphilip::math
 
 		struct conversion_currency : public fixedphilip::math::conversion::unit
 		{
-			conversion_currency(std::string full_name, std::string alias, fixedphilip::math::number_t currency_to_one_usd, fixedphilip::math::number_t one_usd_to_currency)
+			conversion_currency(std::string full_name, std::string alias,
+				fixedphilip::math::number_t currency_to_one_usd, fixedphilip::math::number_t one_usd_to_currency)
 				: fixedphilip::math::conversion::unit(full_name, { alias })
 			{
 				unit_to_base = [currency_to_one_usd](fixedphilip::math::number_t currency)
@@ -470,14 +476,16 @@ namespace fixedphilip::math
 		unit_to_string = [name](number_t unit, int decimals, bool separate) { return format_number(unit, decimals, separate) + " " + name; };
 	}
 
-	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list, unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function)
+	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list,
+		unit_to_base_fn unit_to_base_function, base_to_unit_fn base_to_unit_function)
 		: display_name(name), aliases(alias_list), unit_to_base(unit_to_base_function), base_to_unit(base_to_unit_function)
 	{
 		string_to_unit = [name](const std::string& expression) { return parse_expression_throws(expression, name); };
 		unit_to_string = [name](number_t unit, int decimals, bool separate) { return format_number(unit, decimals, separate) + " " + name; };
 	}
 
-	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list, string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function)
+	conversion::unit::unit(std::string name, std::initializer_list<std::string> alias_list,
+		string_to_unit_fn string_to_unit_function, unit_to_string_fn unit_to_string_function)
 		: display_name(name), aliases(alias_list), string_to_unit(string_to_unit_function), unit_to_string(unit_to_string_function)
 	{
 		unit_to_base = identity;

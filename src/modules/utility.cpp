@@ -25,7 +25,8 @@ namespace discofloor
             auto result = co_await event.get_bot()->co_user_get(event.get_user_context_menu()->get_user().id);
             if (result.is_error())
             {
-                event.reply(dpp::message(std::format(":x: **| Failed to get additional user info for \"{}\".**", discofloor::get_username(event.get_user_context_menu()->get_user()))).set_flags(dpp::m_ephemeral));
+                event.reply(dpp::message(std::format(":x: **| Failed to get additional user info for \"{}\".**",
+                    discofloor::get_username(event.get_user_context_menu()->get_user()))).set_flags(dpp::m_ephemeral));
                 co_return;
             }
             auto user_identified = result.get<dpp::user_identified>();
@@ -39,11 +40,13 @@ namespace discofloor
                 }
                 else
                 {
-                    event.reply(dpp::message(std::format(":x: **| Failed to get banner for \"{}\".**", discofloor::get_username(user_identified))).set_flags(dpp::m_ephemeral));
+                    event.reply(dpp::message(std::format(":x: **| Failed to get banner for \"{}\".**",
+                        discofloor::get_username(user_identified))).set_flags(dpp::m_ephemeral));
                     co_return;
                 }
             }
-            event.reply(dpp::message(std::format(":frame_photo: **| Banner for \"{}\":** {}", discofloor::get_username(user_identified), banner)).set_flags(dpp::m_ephemeral));
+            event.reply(dpp::message(std::format(":frame_photo: **| Banner for \"{}\":** {}",
+                discofloor::get_username(user_identified), banner)).set_flags(dpp::m_ephemeral));
         }
 
         static dpp::task<void> run_extract_emojis(const run_event& event)
@@ -108,7 +111,8 @@ namespace discofloor
                     auto& emoji = extracted_emojis[i].emoji;
                     if (!extracted_emojis[i].unknown_if_animated)
                     {
-                        reply_message += std::format("\n{}. \"<{}\\:{}\\:{}>\" - <{}>", i + 1, emoji.is_animated() ? "a" : "", emoji.name, std::to_string(emoji.id), emoji.get_url(4096));
+                        reply_message += std::format("\n{}. \"<{}\\:{}\\:{}>\" - <{}>",
+                            i + 1, emoji.is_animated() ? "a" : "", emoji.name, std::to_string(emoji.id), emoji.get_url(4096));
                     }
                     else
                     {

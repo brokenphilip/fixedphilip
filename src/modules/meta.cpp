@@ -76,7 +76,8 @@ namespace discofloor
 
             auto embed = dpp::embed()
                 .set_color(0x7F00FF)
-                .set_author(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM), "https://github.com/brokenphilip/fixedphilip", "https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
+                .set_author(std::format("fixedphilip {} by brokenphilip", FIXEDPHILIP_BUILD_VERSION_NUM),
+                    "https://github.com/brokenphilip/fixedphilip","https://cdn.discordapp.com/app-icons/449970784585121792/e1f2f0407a77ddd696202c7ec3720e1b.png")
                 .set_description(
                     std::format(
                         "*Powered by discofloor " DISCOFLOOR_VERSION_STRING "*\n"
