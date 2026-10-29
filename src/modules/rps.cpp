@@ -221,19 +221,14 @@ namespace discofloor
                 dpp::component content;
                 content.set_type(dpp::cot_text_display);
 
-                std::string motivator = "\n-# Create a new game using " + command_;
-
+                std::string motivator = "create a new game using " + command_;
                 if (host_choice_ == opponent_choice)
                 {
-                    content.set_content("It's a draw!" + motivator);
-                }
-                else if (host_choice_ > opponent_choice)
-                {
-                    content.set_content(std::format("**{}** wins!{}", host_player, motivator));
+                    content.set_content("-# It's a draw - " + motivator);
                 }
                 else
                 {
-                    content.set_content(std::format("**{}** wins!{}", opp_player, motivator));
+                    content.set_content(std::format("-# {} wins - {}", host_choice_ > opponent_choice ? host_player : opp_player, motivator));
                 }
 
                 container.add_component_v2(title);
@@ -334,10 +329,13 @@ namespace discofloor
                 player_choice opponent(opp_player, opp_choice);
                 if (game->resolve(opponent))
                 {
+                    event.reply(dpp::ir_deferred_update_message, "");
+                    /*
                     event.reply(discofloor::container_msg(std::format(
                         "**{}** and **{}** played rock, paper, scissors!\n"
                         "-# Click the reply to see the results, or create a new game using {}",
                         host_player, opp_player, command)));
+                    */
                     return;
                 }
                 goto game_invalid;
