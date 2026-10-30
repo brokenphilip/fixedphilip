@@ -314,7 +314,7 @@ namespace discofloor
                 if (game_ptr_it == games_.end())
                 {
                     game_invalid:
-                    event.reply(":x: **| " + opp_player + ", this game is invalid - create a new one using " + command + "**");
+                    event.reply(dpp::message(":x: **| This game is invalid - create a new one using " + command + "**").set_flags(dpp::m_ephemeral));
                     return;
                 }
                 auto game = game_ptr_it->get();
@@ -322,7 +322,7 @@ namespace discofloor
                 auto host_player = game->player();
                 if (host_player == opp_player)
                 {
-                    event.reply(":x: **| " + host_player + ", you can't play against yourself!**");
+                    event.reply(dpp::message(":x: **| You can't play against yourself!**").set_flags(dpp::m_ephemeral));
                     return;
                 }
 
