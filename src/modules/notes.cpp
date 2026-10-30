@@ -39,7 +39,8 @@ namespace discofloor
                 "> https://discord.com/channels/1524539150471004160/1524539151129776200/1553447831694610534\n"
             };
 
-            active_book = new timed_book("### :alarm_clock: | Reminders", example, timed_book::tm_disable_buttons, event.command_invoker().id, 0, *event.get_interaction_create(), 60);
+            active_book = new timed_book("### :alarm_clock: | Reminders", timed_book::make_component_vectors_from_string_contents_vector(example),
+                timed_book::tm_disable_buttons, event.command_invoker().id, 1, *event.get_interaction_create(), 60);
             co_return;
         }
 
@@ -158,7 +159,24 @@ namespace discofloor
             page_3.insert(page_3.end(), note_7.begin(), note_7.end());
             page_3.insert(page_3.end(), note_8.begin(), note_8.end());
 
-            active_book = new timed_book("### :alarm_clock: | Reminders", component_vectors, timed_book::tm_disable_buttons, event.command_invoker().id, 0, *event.get_interaction_create(), 60);
+            active_book = new timed_book("### :alarm_clock: | Reminders", component_vectors, timed_book::tm_disable_buttons, event.command_invoker().id, 1, *event.get_interaction_create(), 60);
+            co_return;
+        }
+
+        static dpp::task<void> run_modnote(const run_event& event)
+        {
+            if (!active_book)
+            {
+                event.reply("nuh uh");
+            }
+
+            active_book->modify([](std::string& title, std::vector<std::vector<dpp::component>>& contents)
+            {
+                title = "modified :3";
+                contents.erase(contents.begin() + 1);
+                return 1;
+            });
+            event.reply("OK");
             co_return;
         }
 
@@ -166,8 +184,9 @@ namespace discofloor
         {
             bot_command notes("notes", "Noooooootes :3", bot.me.id, run_notes);
             bot_command notes2("notes2", "Noooooootes2 :3", bot.me.id, run_notes2);
+            bot_command modnote("modnote", "modifyn ote", bot.me.id, run_modnote);
 
-            return { notes, notes2 };
+            return { notes, notes2, modnote };
         }
 
         inline virtual void destroy(bot& bot) override final
